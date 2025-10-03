@@ -1,20 +1,11 @@
-import { describe, it, expect, beforeAll } from 'vitest';
-import { createApp } from '../src/app';
+import request from "supertest";
+import { describe, it, expect } from 'vitest';
+import { app } from "./config/appInstance";
 
-import type { Server } from "http";
-
-let server: Server;
-
-describe('API /', () => {
-  beforeAll(() => {
-    const app = createApp();
-    server = app.listen(3000);
-  });
-  
-  it('should return status 200', async () => {
-    createApp();
-    
-    const res = await fetch('http://localhost:3000');
-    expect(res.status).toBe(200);
+describe('Given a GET request to /merchants', () => {
+  it('THEN it returns status 200 with a list of merchants', async () => {
+		const agent = request.agent(app);
+    const response = await agent.get("/api/merchants")
+    expect(response.status).toBe(200);
   });
 });
