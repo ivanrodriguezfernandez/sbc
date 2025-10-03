@@ -1,12 +1,11 @@
-import express, { type Express, Request, Response } from "express";
+import express, { type Express } from "express";
+import merchantController from "./merchants/merchantController";
 
 export const createApp = (): Express =>{
     const app = express();
     app.set("port", 3000);
 
-    app.get("/api/merchants", (_req: Request, res: Response) => {
-        res.status(200).send('Hello World!')
-        return app;
-    });
+    app.use("/api", merchantController);
+   
     return app;
 }
