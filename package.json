@@ -6,7 +6,8 @@
 	"type": "module",
 	"scripts": {
 		"dev": "tsx src/server.ts",
-		"test": "vitest run"
+		"test": "vitest run",
+		"test:watch": "vitest"
 	},
 	"author": "Iván Rodríguez",
 	"license": "ISC",
