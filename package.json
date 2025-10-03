@@ -1,25 +1,25 @@
 {
-  "name": "sbc",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "type": "module",
-  "scripts": {
-    "dev": "tsx src/server.ts",
-    "test": "vitest run"
-  },
-  "author": "Iván Rodríguez",
-  "license": "ISC",
-  "dependencies": {
-    "express": "^5.1.0",
-    "typescript": "^5.9.3",
-    "vitest": "^3.2.4"
-  },
-  "devDependencies": {
-    "@types/express": "^5.0.3",
-    "@types/supertest": "^6.0.3",
-    "prettier": "^3.6.2",
-    "supertest": "^7.1.4",
-    "tsx": "^4.20.6"
-  }
+	"name": "sbc",
+	"version": "1.0.0",
+	"description": "",
+	"main": "index.js",
+	"type": "module",
+	"scripts": {
+		"dev": "tsx src/server.ts",
+		"test": "vitest run"
+	},
+	"author": "Iván Rodríguez",
+	"license": "ISC",
+	"dependencies": {
+		"express": "^5.1.0",
+		"typescript": "^5.9.3",
+		"vitest": "^3.2.4"
+	},
+	"devDependencies": {
+		"@types/express": "^5.0.3",
+		"@types/supertest": "^6.0.3",
+		"prettier": "^3.6.2",
+		"supertest": "^7.1.4",
+		"tsx": "^4.20.6"
+	}
 }
