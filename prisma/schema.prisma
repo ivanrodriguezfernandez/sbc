@@ -1,0 +1,31 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model merchant {
+  id        String @id @default(uuid())
+  reference String
+  email     String
+}
+
+model Merchant {
+  id                     String                    @id @default(uuid())
+  reference              String
+  email                  String                    @unique
+  live_on                DateTime
+  disbursement_frequency disbursementFrequencyType
+  minimum_monthly_fee    Float
+  createdAt              DateTime                  @default(now()) @db.Timestamptz(6)
+  updatedAt              DateTime                  @updatedAt @db.Timestamptz(6)
+  deletedAt              DateTime?                 @db.Timestamptz(6)
+}
+
+enum disbursementFrequencyType {
+  WEEKLY
+  DAILY
+}

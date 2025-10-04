@@ -12,14 +12,17 @@
 	"author": "Iván Rodríguez",
 	"license": "ISC",
 	"dependencies": {
+		"@prisma/client": "^6.16.3",
 		"express": "^5.1.0",
 		"typescript": "^5.9.3",
 		"vitest": "^3.2.4"
 	},
 	"devDependencies": {
 		"@types/express": "^5.0.3",
+		"@types/node": "^24.6.2",
 		"@types/supertest": "^6.0.3",
 		"prettier": "^3.6.2",
+		"prisma": "^6.16.3",
 		"supertest": "^7.1.4",
 		"tsx": "^4.20.6"
 	}
