@@ -8,12 +8,6 @@ datasource db {
 }
 
 model merchant {
-  id        String @id @default(uuid())
-  reference String
-  email     String
-}
-
-model Merchant {
   id                     String                    @id @default(uuid())
   reference              String
   email                  String                    @unique
