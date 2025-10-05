@@ -29,9 +29,7 @@ describe("Import merchant", () => {
 
 		await importMerchants(filePath);
 
-		const dataFromDb = await prisma?.merchant.findMany({
-			orderBy: { reference: "asc" },
-		});
+		const dataFromDb = await prisma?.merchant.findMany({ orderBy: { reference: "asc" } });
 
 		expect(dataFromDb).toStrictEqual([
 			{
