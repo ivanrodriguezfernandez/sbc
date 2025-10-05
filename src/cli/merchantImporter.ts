@@ -3,7 +3,7 @@ import { pipeline } from "node:stream/promises";
 
 import { parse } from "csv-parse";
 
-import { Merchant } from "@/src/merchants/domain/merchant";
+import { Merchant } from "@/src/merchant/domain/merchant";
 
 import { getDB } from "../__shared__/infrastructure/db";
 
