@@ -23,7 +23,24 @@ export async function importMerchants(filePath: string): Promise<void> {
 			minimumMonthlyFee: Number(csvrow[5]),
 		};
 
-		insertPromises.push(prisma.merchant.create({ data }));
+		insertPromises.push(
+			prisma.merchant.upsert({
+				where: {
+					id_reference_email: {
+						id: data.id,
+						reference: data.reference,
+						email: data.email,
+					},
+				},
+				update: {
+					email: data.email,
+					liveOn: data.liveOn,
+					disbursementFrequency: data.disbursementFrequency,
+					minimumMonthlyFee: data.minimumMonthlyFee,
+				},
+				create: data,
+			}),
+		);
 	});
 
 	await pipeline(fs.createReadStream(filePath), parser);

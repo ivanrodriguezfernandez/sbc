@@ -10,7 +10,7 @@ import { setupTestDb } from "../config/setup";
 
 const getFilePath = (filename: string) => path.join(__dirname, `./csvMocks/${filename}`);
 
-let prisma: PrismaClient | undefined;
+let prisma: PrismaClient;
 let container: StartedPostgreSqlContainer;
 
 describe("Import merchant", () => {
@@ -20,7 +20,7 @@ describe("Import merchant", () => {
 	}, 60_000);
 
 	afterAll(async () => {
-		await prisma?.$disconnect();
+		await prisma.$disconnect();
 		await container.stop();
 	});
 
@@ -29,7 +29,7 @@ describe("Import merchant", () => {
 
 		await importMerchants(filePath);
 
-		const dataFromDb = await prisma?.merchant.findMany({ orderBy: { reference: "asc" } });
+		const dataFromDb = await prisma.merchant.findMany({ orderBy: { reference: "asc" } });
 
 		expect(dataFromDb).toStrictEqual([
 			{
@@ -55,5 +55,28 @@ describe("Import merchant", () => {
 				deletedAt: null,
 			},
 		]);
+	});
+
+	it("WHEN csv is imported twice THEN existing merchants are updated, not duplicated", async () => {
+		const filePath = getFilePath("basic.csv");
+
+		await importMerchants(filePath);
+		await importMerchants(filePath);
+
+		const merchants = await prisma.merchant.findMany({ orderBy: { reference: "asc" } });
+
+		expect(merchants).toHaveLength(2);
+	});
+
+	it("WHEN an existing merchant is reimported with updated data THEN fields are updated", async () => {
+		const filePath = getFilePath("basic.csv");
+		await importMerchants(filePath);
+
+		const updatedFilePath = getFilePath("basic_updated.csv");
+		await importMerchants(updatedFilePath);
+
+		const merchant = await prisma.merchant.findFirst({ where: { reference: "deckow_gibson" } });
+
+		expect(merchant?.email).toBe("new_email@deckow-gibson.com");
 	});
 });

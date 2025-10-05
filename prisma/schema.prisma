@@ -10,7 +10,7 @@ datasource db {
 model merchant {
   id                    String                    @id @default(uuid())
   reference             String
-  email                 String                    @unique
+  email                 String
   liveOn                DateTime
   disbursementFrequency disbursementFrequencyType
   minimumMonthlyFee     Float
@@ -20,6 +20,8 @@ model merchant {
   createdAt DateTime  @default(now()) @db.Timestamptz(6)
   updatedAt DateTime  @updatedAt @db.Timestamptz(6)
   deletedAt DateTime? @db.Timestamptz(6)
+
+  @@unique([id, reference, email])
 }
 
 model order {
