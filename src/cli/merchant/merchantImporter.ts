@@ -27,17 +27,12 @@ export async function importMerchants(filePath: string): Promise<void> {
 			disbursementFrequency: csvrow[4],
 			minimumMonthlyFee: Number(csvrow[5]),
 		};
+
 		console.log(`Processing row ${rowCount}: ${data.reference}`);
 
 		insertPromises.push(
 			prisma.merchant.upsert({
-				where: {
-					id_reference_email: {
-						id: data.id,
-						reference: data.reference,
-						email: data.email,
-					},
-				},
+				where: { id: data.id },
 				update: {
 					email: data.email,
 					liveOn: data.liveOn,
