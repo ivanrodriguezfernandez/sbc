@@ -14,9 +14,30 @@ model merchant {
   liveOn                DateTime
   disbursementFrequency disbursementFrequencyType
   minimumMonthlyFee     Float
-  createdAt             DateTime                  @default(now()) @db.Timestamptz(6)
-  updatedAt             DateTime                  @updatedAt @db.Timestamptz(6)
-  deletedAt             DateTime?                 @db.Timestamptz(6)
+  orders                order[]
+
+  //Audit
+  createdAt DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime  @updatedAt @db.Timestamptz(6)
+  deletedAt DateTime? @db.Timestamptz(6)
+}
+
+model order {
+  id              String   @id @default(uuid())
+  externalId      String   @db.Char(12)
+  merchantId      String
+  amount          Decimal  @db.Decimal(12, 2)
+  transactionDate DateTime
+
+  //Audit
+  createdAt DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime  @updatedAt @db.Timestamptz(6)
+  deletedAt DateTime? @db.Timestamptz(6)
+
+  merchant merchant @relation(fields: [merchantId], references: [id])
+
+  @@unique([externalId, merchantId])
+  @@index([merchantId])
 }
 
 enum disbursementFrequencyType {

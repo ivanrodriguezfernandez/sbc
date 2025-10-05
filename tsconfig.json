@@ -17,6 +17,7 @@
     "skipLibCheck": true,
     "strict": true,
     "resolveJsonModule": true,
+    "baseUrl": ".",
     "paths": {
       "@/src/*": ["src/*"],
       "@/tests/*": ["tests/*"]
