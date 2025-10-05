@@ -1,6 +1,7 @@
 import express, { type Express } from "express";
 
-import merchantController from "@/src/merchants/infrastructure/merchantController";
+// eslint-disable-next-line no-restricted-imports
+import merchantController from "../src/merchants/infrastructure/merchantController";
 
 export const createApp = (): Express => {
 	const app = express();
