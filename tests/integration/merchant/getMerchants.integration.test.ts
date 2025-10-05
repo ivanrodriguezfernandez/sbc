@@ -1,13 +1,17 @@
-import { app } from "../../config/appInstance";
-import request from "supertest";
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { StartedPostgreSqlContainer } from "@testcontainers/postgresql";
-import { setupTestDb } from "../../config/setup";
 import {
-	PrismaClient,
 	disbursementFrequencyType as prismaDisbursementFrequencyType,
+	PrismaClient,
 } from "@prisma/client";
+import { StartedPostgreSqlContainer } from "@testcontainers/postgresql";
+import request from "supertest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+
+// eslint-disable-next-line no-restricted-imports
 import { getDB } from "../../../src/__shared__/infrastructure/db";
+// eslint-disable-next-line no-restricted-imports
+import { app } from "../../config/appInstance";
+// eslint-disable-next-line no-restricted-imports
+import { setupTestDb } from "../../config/setup";
 
 let prisma: PrismaClient | undefined;
 let container: StartedPostgreSqlContainer;

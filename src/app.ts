@@ -1,5 +1,6 @@
 import express, { type Express } from "express";
-import merchantController from "./merchants/infrastructure/merchantController";
+
+import merchantController from "@/src/merchants/infrastructure/merchantController";
 
 export const createApp = (): Express => {
 	const app = express();

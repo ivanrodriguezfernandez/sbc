@@ -1,5 +1,7 @@
-import { getMerchants } from "../aplication/getMerchants";
 import express, { NextFunction, Request, Response } from "express";
+
+// eslint-disable-next-line no-restricted-imports
+import { getMerchants } from "../aplication/getMerchants";
 
 const router = express.Router();
 

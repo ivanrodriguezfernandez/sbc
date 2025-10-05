@@ -1,5 +1,6 @@
-import { PostgreSqlContainer, StartedPostgreSqlContainer } from "@testcontainers/postgresql";
 import { execSync } from "node:child_process";
+
+import { PostgreSqlContainer, StartedPostgreSqlContainer } from "@testcontainers/postgresql";
 
 export async function setupTestDb(): Promise<StartedPostgreSqlContainer> {
 	const container = await new PostgreSqlContainer("postgres:15-alpine")
