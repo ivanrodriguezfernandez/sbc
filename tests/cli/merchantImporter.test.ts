@@ -5,7 +5,7 @@ import { StartedPostgreSqlContainer } from "@testcontainers/postgresql";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { getDB } from "../../src/__shared__/infrastructure/db";
-import { importMerchants } from "../../src/cli/merchantImporter";
+import { importMerchants } from "../../src/cli/merchant/merchantImporter";
 import { setupTestDb } from "../config/setup";
 
 const getFilePath = (filename: string) => path.join(__dirname, `./csvMocks/${filename}`);
