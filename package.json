@@ -5,6 +5,7 @@
 	"main": "index.js",
 	"type": "module",
 	"scripts": {
+		"importMerchants": "tsx src/cli/index.ts",
 		"dev": "tsx src/server.ts",
 		"test": "vitest run",
 		"test:watch": "vitest",
