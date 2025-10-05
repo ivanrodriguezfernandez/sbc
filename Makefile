@@ -12,9 +12,9 @@ prisma/client/generate: ## Generate the prisma client
 .PHONY: migrations/generate
 prisma/migrations/generate: ## Generate the new migration files based on the schema.prisma
 	@echo Generating the new migrations
-	POSTGRES_URL=localhost npx dotenv -e .env.dev -- npx prisma migrate dev --create-only
+	npx prisma migrate dev --create-only
 
 .PHONY: migrations/apply
 prisma/migrations/apply: ## Apply the pending migrations on the dev environment
 	@echo Applying the pending migrations on the dev environment
-	POSTGRES_URL=localhost npx dotenv -e .env.dev -- npx prisma migrate deploy
+	npx prisma migrate deploy
