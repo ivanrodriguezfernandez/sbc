@@ -1,23 +1,59 @@
 import { app } from "../../config/appInstance";
 import request from "supertest";
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { StartedPostgreSqlContainer } from "@testcontainers/postgresql";
+import { setupTestDb } from "../../config/setup";
+import {
+	PrismaClient,
+	disbursementFrequencyType as prismaDisbursementFrequencyType,
+} from "@prisma/client";
+import { getDB } from "../../../src/__shared__/infrastructure/db";
+
+let prisma: PrismaClient | undefined;
+let container: StartedPostgreSqlContainer;
+
+const DisbursementFrequencyType = prismaDisbursementFrequencyType;
 
 describe("Given a GET request to /merchants", () => {
-	it("THEN it returns status 200 with a list of merchants", async () => {
-		const agent = request.agent(app);
+	beforeAll(async () => {
+		container = await setupTestDb();
+		prisma = getDB();
+	}, 60_000);
 
+	afterAll(async () => {
+		await prisma?.$disconnect();
+		await container.stop();
+	});
+
+	it("THEN it returns status 200 with a list of merchants", async () => {
+		await prisma?.merchant.create({
+			data: {
+				id: "86312006-4d7e-45c4-9c28-788f4aa68a62",
+				reference: "padberg_group",
+				email: "info@padberg-group.com",
+				live_on: new Date("2023-02-01T00:00:00.000Z"),
+				disbursement_frequency: DisbursementFrequencyType.DAILY,
+				minimum_monthly_fee: 0.0,
+			},
+		});
+
+		const agent = request.agent(app);
 		const response = await agent.get("/api/merchants");
 
 		expect(response.status).toBe(200);
 		const body = response.body;
+
 		expect(body).toStrictEqual([
 			{
-				id: "86312006-4d7e-45c4-9c28-788f4aa68a62",
+				id: expect.any(String),
 				reference: "padberg_group",
 				email: "info@padberg-group.com",
-				live_on: "2023-02-01",
+				live_on: "2023-02-01T00:00:00.000Z",
 				disbursement_frequency: "DAILY",
 				minimum_monthly_fee: 0.0,
+				createdAt: expect.any(String),
+				updatedAt: expect.any(String),
+				deletedAt: null,
 			},
 		]);
 	});
