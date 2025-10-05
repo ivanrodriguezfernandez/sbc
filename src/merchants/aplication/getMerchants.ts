@@ -1,20 +1,10 @@
 // eslint-disable-next-line no-restricted-imports
 import { getDB } from "../../__shared__/infrastructure/db";
+// eslint-disable-next-line no-restricted-imports
+import { Merchant } from "../domain/merchant";
 
-export async function getMerchants(): Promise<
-	Array<{
-		id: string;
-		reference: string;
-		email: string;
-		liveOn: Date;
-		disbursementFrequency: "WEEKLY" | "DAILY";
-		minimumMonthlyFee: number;
-		createdAt: Date;
-		updatedAt: Date;
-		deletedAt: Date | null;
-	}>
-> {
+export async function getMerchants(): Promise<Result<Array<Merchant>>> {
 	const prisma = getDB();
 	const merchants = await prisma.merchant.findMany();
-	return merchants;
+	return { isSuccess: true, data: merchants };
 }
