@@ -29,13 +29,6 @@ export default [
 		rules: {
 			"simple-import-sort/imports": "error",
 			"simple-import-sort/exports": "error",
-
-			"no-restricted-imports": [
-				"error",
-				{
-					patterns: ["../*"],
-				},
-			],
 			"no-console": "off",
 			"@typescript-eslint/member-ordering": [
 				"error",

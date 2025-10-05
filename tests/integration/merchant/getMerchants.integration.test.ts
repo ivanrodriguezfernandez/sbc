@@ -6,11 +6,8 @@ import { StartedPostgreSqlContainer } from "@testcontainers/postgresql";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-// eslint-disable-next-line no-restricted-imports
 import { getDB } from "../../../src/__shared__/infrastructure/db";
-// eslint-disable-next-line no-restricted-imports
 import { app } from "../../config/appInstance";
-// eslint-disable-next-line no-restricted-imports
 import { setupTestDb } from "../../config/setup";
 
 let prisma: PrismaClient | undefined;
@@ -47,7 +44,7 @@ describe("Given a GET request to /merchants", () => {
 		expect(response.status).toBe(200);
 		const body = response.body;
 
-		expect(body).toStrictEqual([
+		expect(body.data).toStrictEqual([
 			{
 				id: expect.any(String),
 				reference: "padberg_group",
