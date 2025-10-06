@@ -29,6 +29,6 @@ export async function setupPostgresContainer(): Promise<{
 }
 
 export async function teardownPostgresContainer(): Promise<void> {
-	if (prisma) await prisma.$disconnect();
-	if (container) await container.stop();
+	await prisma.$disconnect();
+	await container.stop();
 }

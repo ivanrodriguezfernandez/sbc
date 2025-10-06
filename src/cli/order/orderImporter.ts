@@ -77,6 +77,7 @@ export async function importOrders(filePath: string): Promise<Result> {
 	async function* processRowAsync(source: Parser) {
 		for await (const chunk of source) {
 			try {
+				// eslint-disable-next-line
 				yield await processRow(chunk, prisma);
 			} catch (error) {
 				console.error(error);
