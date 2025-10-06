@@ -24,7 +24,7 @@ describe("Import merchant", () => {
 	});
 
 	it("WHEN csv is imported THEN database is populated", async () => {
-		const filePath = getFilePath("basic.csv");
+		const filePath = getFilePath("basic_merchant.csv");
 
 		await importMerchants(filePath);
 
@@ -57,18 +57,18 @@ describe("Import merchant", () => {
 	});
 
 	it("WHEN csv is imported twice THEN existing merchants are updated, not duplicated", async () => {
-		const filePath = getFilePath("basic.csv");
+		const filePath = getFilePath("basic_merchant.csv");
 
 		await importMerchants(filePath);
 		await importMerchants(filePath);
 
-		const merchants = await prisma.merchant.findMany({ orderBy: { reference: "asc" } });
+		const merchants = await prisma.merchant.findMany();
 
 		expect(merchants).toHaveLength(2);
 	});
 
 	it("WHEN an existing merchant is reimported with updated data THEN fields are updated", async () => {
-		const filePath = getFilePath("basic.csv");
+		const filePath = getFilePath("basic_merchant.csv");
 		await importMerchants(filePath);
 
 		const updatedFilePath = getFilePath("basic_updated.csv");
