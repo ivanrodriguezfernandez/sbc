@@ -3,12 +3,47 @@ import * as readline from "node:readline/promises";
 import { pipeline } from "node:stream/promises";
 
 import { parse } from "csv-parse";
+import { stringify } from "csv-stringify/sync";
 
 import { getDB } from "../../__shared__/infrastructure/db";
 
 const VALID_HEADERS = "id;merchant_reference;amount;created_at";
 
-export async function importOrders(filePath: string): Promise<void> {
+type OrderRecord = {
+	id: string;
+	merchant_reference: string;
+	amount: number | string;
+	created_at: Date | string;
+};
+
+type RowError = {
+	row: number;
+	errors: Array<string>;
+} & OrderRecord;
+
+type Result = { errors: Array<RowError> };
+
+const ERROR_MESSAGES = {
+	InvalidColumnNames: "Invalid column names",
+};
+
+async function validateColumnHeaders(filePath: string): Promise<Result> {
+	const result: Result = { errors: [] };
+	const firstLine = await getFirstLine(filePath);
+	if (firstLine !== VALID_HEADERS) {
+		result.errors.push({
+			row: 0,
+			id: "",
+			merchant_reference: "",
+			amount: "",
+			created_at: "",
+			errors: [ERROR_MESSAGES.InvalidColumnNames],
+		});
+	}
+	return result;
+}
+
+export async function importOrders(filePath: string): Promise<Result> {
 	const prisma = getDB();
 	console.log(`Starting import from file: ${filePath}`);
 
@@ -16,13 +51,11 @@ export async function importOrders(filePath: string): Promise<void> {
 
 	let rowCount = 0;
 
-	const firstLine = await getFirstLine(filePath);
-	if (firstLine !== VALID_HEADERS) {
-		const output =
-			"row;id;merchant_reference;amount;created_at;errors\n" + "0;;;;;Invalid column names\n";
+	const result: Result = await validateColumnHeaders(filePath);
 
-		await writeOutputCSV(output);
-		return;
+	if (result.errors.length > 0) {
+		await writeOutputCSV(result);
+		return result;
 	}
 
 	parser.on("data", async (csvrow) => {
@@ -61,7 +94,14 @@ async function getFirstLine(filePath: string): Promise<string> {
 	return line;
 }
 
-async function writeOutputCSV(output: string) {
+async function writeOutputCSV(result: Result) {
+	const formattedErrors = result.errors.map((error) => ({
+		...error,
+		errors: error.errors.join(" | "),
+	}));
+
+	const output = stringify(formattedErrors, { header: true, delimiter: ";" });
+
 	if (!fs.existsSync("./importReport")) {
 		fs.mkdirSync("./importReport");
 	}
