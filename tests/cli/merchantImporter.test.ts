@@ -71,7 +71,7 @@ describe("Import merchant", () => {
 		const filePath = getFilePath("basic_merchant.csv");
 		await importMerchants(filePath);
 
-		const updatedFilePath = getFilePath("basic_updated.csv");
+		const updatedFilePath = getFilePath("basic_merchant_updated.csv");
 		await importMerchants(updatedFilePath);
 
 		const merchant = await prisma.merchant.findFirst({ where: { reference: "deckow_gibson" } });
