@@ -4,7 +4,6 @@ import {
 } from "@prisma/client";
 import { StartedPostgreSqlContainer } from "@testcontainers/postgresql";
 import request from "supertest";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { getDB } from "../../../src/__shared__/infrastructure/db";
 import { app } from "../../config/appInstance";

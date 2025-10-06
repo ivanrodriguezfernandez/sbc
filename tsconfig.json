@@ -19,6 +19,7 @@
     "resolveJsonModule": true,
     "ignoreDeprecations":"6.0",
     "baseUrl": ".",
+     "types": ["node", "vitest/globals"],
     "paths": {
       "@/src/*": ["src/*"],
       "@/tests/*": ["tests/*"]

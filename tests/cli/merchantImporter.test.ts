@@ -2,7 +2,6 @@ import path from "node:path";
 
 import { PrismaClient } from "@prisma/client";
 import { StartedPostgreSqlContainer } from "@testcontainers/postgresql";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { getDB } from "../../src/__shared__/infrastructure/db";
 import { importMerchants } from "../../src/cli/merchant/merchantImporter";

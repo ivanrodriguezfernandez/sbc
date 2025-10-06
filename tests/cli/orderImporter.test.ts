@@ -6,7 +6,6 @@ import {
 	PrismaClient,
 } from "@prisma/client";
 import { StartedPostgreSqlContainer } from "@testcontainers/postgresql";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { getDB } from "../../src/__shared__/infrastructure/db";
 import { importOrders } from "../../src/cli/order/orderImporter";
