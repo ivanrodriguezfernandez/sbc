@@ -21,11 +21,7 @@ export async function importOrders(filePath: string): Promise<void> {
 		const output =
 			"row;id;merchant_reference;amount;created_at;errors\n" + "0;;;;;Invalid column names\n";
 
-		if (!fs.existsSync("./importReport")) {
-			fs.mkdirSync("./importReport");
-		}
-
-		fs.writeFileSync("./importReport/report.csv", output);
+		await writeOutputCSV(output);
 		return;
 	}
 
@@ -63,4 +59,12 @@ async function getFirstLine(filePath: string): Promise<string> {
 	});
 	readable.close();
 	return line;
+}
+
+async function writeOutputCSV(output: string) {
+	if (!fs.existsSync("./importReport")) {
+		fs.mkdirSync("./importReport");
+	}
+
+	fs.writeFileSync("./importReport/report.csv", output);
 }
