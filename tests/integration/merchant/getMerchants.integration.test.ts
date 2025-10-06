@@ -2,29 +2,24 @@ import {
 	disbursementFrequencyType as prismaDisbursementFrequencyType,
 	PrismaClient,
 } from "@prisma/client";
-import { StartedPostgreSqlContainer } from "@testcontainers/postgresql";
 import request from "supertest";
 
-import { getDB } from "../../../src/__shared__/infrastructure/db";
 import { app } from "../../config/appInstance";
-import { setupTestDb } from "../../config/setup";
+import { setupPostgresContainer, teardownPostgresContainer } from "../../config/setup";
 
 let prisma: PrismaClient | undefined;
-let container: StartedPostgreSqlContainer;
 
 const DisbursementFrequencyType = prismaDisbursementFrequencyType;
 
 describe("Given a GET request to /merchants", () => {
 	beforeAll(async () => {
-		container = await setupTestDb();
-		prisma = getDB();
-	}, 60_000);
-
-	afterAll(async () => {
-		await prisma?.$disconnect();
-		await container.stop();
+		const setup = await setupPostgresContainer();
+		prisma = setup.prisma;
 	});
 
+	afterAll(async () => {
+		await teardownPostgresContainer();
+	});
 	it("THEN it returns status 200 with a list of merchants", async () => {
 		await prisma?.merchant.create({
 			data: {

@@ -1,26 +1,22 @@
 import path from "node:path";
 
 import { PrismaClient } from "@prisma/client";
-import { StartedPostgreSqlContainer } from "@testcontainers/postgresql";
 
-import { getDB } from "../../src/__shared__/infrastructure/db";
 import { importMerchants } from "../../src/cli/merchant/merchantImporter";
-import { setupTestDb } from "../config/setup";
+import { setupPostgresContainer, teardownPostgresContainer } from "../config/setup";
 
 const getFilePath = (filename: string) => path.join(__dirname, `./csvMocks/${filename}`);
 
 let prisma: PrismaClient;
-let container: StartedPostgreSqlContainer;
 
 describe("Import merchant", () => {
 	beforeAll(async () => {
-		container = await setupTestDb();
-		prisma = getDB();
-	}, 60_000);
+		const setup = await setupPostgresContainer();
+		prisma = setup.prisma;
+	});
 
 	afterAll(async () => {
-		await prisma.$disconnect();
-		await container.stop();
+		await teardownPostgresContainer();
 	});
 
 	it("WHEN csv is imported THEN database is populated", async () => {

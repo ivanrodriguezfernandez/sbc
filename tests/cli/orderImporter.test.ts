@@ -5,28 +5,24 @@ import {
 	disbursementFrequencyType as prismaDisbursementFrequencyType,
 	PrismaClient,
 } from "@prisma/client";
-import { StartedPostgreSqlContainer } from "@testcontainers/postgresql";
 
-import { getDB } from "../../src/__shared__/infrastructure/db";
 import { importOrders } from "../../src/cli/order/orderImporter";
-import { setupTestDb } from "../config/setup";
+import { setupPostgresContainer, teardownPostgresContainer } from "../config/setup";
 
 const getFilePath = (filename: string) => path.join(__dirname, `./csvMocks/${filename}`);
 
 let prisma: PrismaClient;
-let container: StartedPostgreSqlContainer;
 
 const DisbursementFrequencyType = prismaDisbursementFrequencyType;
 
 describe("Import order", () => {
 	beforeAll(async () => {
-		container = await setupTestDb();
-		prisma = getDB();
-	}, 60_000);
+		const setup = await setupPostgresContainer();
+		prisma = setup.prisma;
+	});
 
 	afterAll(async () => {
-		await prisma.$disconnect();
-		await container.stop();
+		await teardownPostgresContainer();
 	});
 
 	it("WHEN csv column headers are invalid THEN it return an error message", async () => {

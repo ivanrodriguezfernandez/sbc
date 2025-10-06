@@ -2,12 +2,11 @@ import fs from "node:fs";
 import * as readline from "node:readline/promises";
 import { pipeline } from "node:stream/promises";
 
+import { PrismaClient } from "@prisma/client/extension";
 import { Info, parse, Parser } from "csv-parse";
 import { stringify } from "csv-stringify/sync";
 
 import { getDB } from "../../__shared__/infrastructure/db";
-
-const prisma = getDB();
 
 const VALID_HEADERS = "id;merchant_reference;amount;created_at";
 let processedRows: number;
@@ -51,6 +50,8 @@ async function validateColumnHeaders(filePath: string): Promise<Result> {
 export async function importOrders(filePath: string): Promise<Result> {
 	console.log(`Starting import from file: ${filePath}`);
 
+	const prisma = getDB();
+
 	const result: Result = await validateColumnHeaders(filePath);
 
 	if (result.errors.length > 0) {
@@ -70,6 +71,16 @@ export async function importOrders(filePath: string): Promise<Result> {
 		for await (const processedRowResult of iterable) {
 			if (processedRowResult && processedRowResult.errors.length > 0) {
 				result.errors.push(processedRowResult);
+			}
+		}
+	}
+	async function* processRowAsync(source: Parser) {
+		for await (const chunk of source) {
+			try {
+				yield await processRow(chunk, prisma);
+			} catch (error) {
+				console.error(error);
+				break;
 			}
 		}
 	}
@@ -93,18 +104,10 @@ async function getFirstLine(filePath: string): Promise<string> {
 	return line;
 }
 
-async function* processRowAsync(source: Parser) {
-	for await (const chunk of source) {
-		try {
-			yield await processRow(chunk);
-		} catch (error) {
-			console.error(error);
-			break;
-		}
-	}
-}
-
-async function processRow({ info, record }: { info: Info; record: OrderRecord }) {
+async function processRow(
+	{ info, record }: { info: Info; record: OrderRecord },
+	prisma: PrismaClient,
+) {
 	const orderRecord = record;
 	const HEADERS_ROW = 1;
 	processedRows = info.records + HEADERS_ROW;
@@ -118,7 +121,7 @@ async function processRow({ info, record }: { info: Info; record: OrderRecord })
 			externalId: orderRecord.id,
 			merchantId: merchant.id,
 			amount: orderRecord.amount,
-			transactionDate: orderRecord.created_at,
+			transactionDate: new Date(orderRecord.created_at),
 		},
 	});
 
