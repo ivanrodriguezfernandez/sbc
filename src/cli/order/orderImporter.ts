@@ -2,12 +2,15 @@ import fs from "node:fs";
 import * as readline from "node:readline/promises";
 import { pipeline } from "node:stream/promises";
 
-import { parse } from "csv-parse";
+import { Info, parse, Parser } from "csv-parse";
 import { stringify } from "csv-stringify/sync";
 
 import { getDB } from "../../__shared__/infrastructure/db";
 
+const prisma = getDB();
+
 const VALID_HEADERS = "id;merchant_reference;amount;created_at";
+let processedRows: number;
 
 type OrderRecord = {
 	id: string;
@@ -20,6 +23,8 @@ type RowError = {
 	row: number;
 	errors: Array<string>;
 } & OrderRecord;
+
+type ProcessedRowResult = RowError | undefined;
 
 type Result = { errors: Array<RowError> };
 
@@ -44,12 +49,7 @@ async function validateColumnHeaders(filePath: string): Promise<Result> {
 }
 
 export async function importOrders(filePath: string): Promise<Result> {
-	const prisma = getDB();
 	console.log(`Starting import from file: ${filePath}`);
-
-	const parser = parse({ delimiter: ";", from_line: 2 });
-
-	let rowCount = 0;
 
 	const result: Result = await validateColumnHeaders(filePath);
 
@@ -58,27 +58,26 @@ export async function importOrders(filePath: string): Promise<Result> {
 		return result;
 	}
 
-	parser.on("data", async (csvrow) => {
-		rowCount++;
-
-		const externalId = String(csvrow[0]);
-		const merchantReference = csvrow[1];
-		const amount = Number(csvrow[2]);
-		const transactionDate = new Date(csvrow[3]);
-
-		const merchant = await prisma.merchant.findFirst({ where: { reference: merchantReference } });
-
-		await prisma.order.create({
-			data: { externalId, merchantId: merchant.id, amount, transactionDate },
-		});
-
-		console.log(`Processing row ${rowCount}: ${externalId}`);
+	const parser = parse({
+		columns: true,
+		delimiter: ";",
+		skipRecordsWithEmptyValues: true,
+		info: true,
+		cast: true,
 	});
 
-	await pipeline(fs.createReadStream(filePath), parser);
+	async function processRowResults(iterable: AsyncIterable<ProcessedRowResult>) {
+		for await (const processedRowResult of iterable) {
+			if (processedRowResult && processedRowResult.errors.length > 0) {
+				result.errors.push(processedRowResult);
+			}
+		}
+	}
 
-	console.log(`Import finished! Total rows processed: ${rowCount}`);
-	return;
+	await pipeline(fs.createReadStream(filePath), parser, processRowAsync, processRowResults);
+
+	await writeOutputCSV(result);
+	return result;
 }
 
 async function getFirstLine(filePath: string): Promise<string> {
@@ -92,6 +91,38 @@ async function getFirstLine(filePath: string): Promise<string> {
 	});
 	readable.close();
 	return line;
+}
+
+async function* processRowAsync(source: Parser) {
+	for await (const chunk of source) {
+		try {
+			yield await processRow(chunk);
+		} catch (error) {
+			console.error(error);
+			break;
+		}
+	}
+}
+
+async function processRow({ info, record }: { info: Info; record: OrderRecord }) {
+	const orderRecord = record;
+	const HEADERS_ROW = 1;
+	processedRows = info.records + HEADERS_ROW;
+
+	const merchant = await prisma.merchant.findFirst({
+		where: { reference: orderRecord.merchant_reference },
+	});
+
+	await prisma.order.create({
+		data: {
+			externalId: orderRecord.id,
+			merchantId: merchant.id,
+			amount: orderRecord.amount,
+			transactionDate: orderRecord.created_at,
+		},
+	});
+
+	console.log("processedRows", processedRows);
 }
 
 async function writeOutputCSV(result: Result) {
