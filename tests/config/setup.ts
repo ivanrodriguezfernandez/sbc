@@ -1,15 +1,34 @@
-import { execSync } from "node:child_process";
-
+import { PrismaClient } from "@prisma/client";
 import { PostgreSqlContainer, StartedPostgreSqlContainer } from "@testcontainers/postgresql";
+import shelljs from "shelljs";
 
-export async function setupTestDb(): Promise<StartedPostgreSqlContainer> {
-	const container = await new PostgreSqlContainer("postgres:15-alpine")
+let container: StartedPostgreSqlContainer;
+let prisma: PrismaClient;
+
+export async function setupPostgresContainer(): Promise<{
+	prisma: PrismaClient;
+	container: StartedPostgreSqlContainer;
+}> {
+	container = await new PostgreSqlContainer("postgres:13.3-alpine")
 		.withDatabase("testdb")
-		.withUsername("test")
-		.withPassword("test")
+		.withUsername("testuser")
+		.withPassword("testpass")
 		.start();
 
-	process.env.DATABASE_URL = container.getConnectionUri();
-	execSync("npx prisma migrate deploy", { stdio: "inherit" }); // show Prisma output in console
-	return container;
+	const mappedPort = container.getMappedPort(5432);
+	const databaseUrl = `postgresql://testuser:testpass@localhost:${mappedPort}/testdb?schema=public`;
+
+	process.env.DATABASE_URL = databaseUrl;
+
+	shelljs.exec(`DATABASE_URL=${databaseUrl} npx prisma migrate deploy > /dev/null 2>&1`);
+
+	prisma = new PrismaClient({ datasources: { db: { url: databaseUrl } } });
+	await prisma.$connect();
+
+	return { prisma, container };
+}
+
+export async function teardownPostgresContainer(): Promise<void> {
+	await prisma.$disconnect();
+	await container.stop();
 }

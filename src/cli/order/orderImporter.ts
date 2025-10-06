@@ -2,54 +2,94 @@ import fs from "node:fs";
 import * as readline from "node:readline/promises";
 import { pipeline } from "node:stream/promises";
 
-import { parse } from "csv-parse";
+import { PrismaClient } from "@prisma/client/extension";
+import { Info, parse, Parser } from "csv-parse";
+import { stringify } from "csv-stringify/sync";
 
 import { getDB } from "../../__shared__/infrastructure/db";
 
 const VALID_HEADERS = "id;merchant_reference;amount;created_at";
+let processedRows: number;
 
-export async function importOrders(filePath: string): Promise<void> {
-	const prisma = getDB();
-	console.log(`Starting import from file: ${filePath}`);
+type OrderRecord = {
+	id: string;
+	merchant_reference: string;
+	amount: number | string;
+	created_at: Date | string;
+};
 
-	const parser = parse({ delimiter: ";", from_line: 2 });
+type RowError = {
+	row: number;
+	errors: Array<string>;
+} & OrderRecord;
 
-	let rowCount = 0;
+type ProcessedRowResult = RowError | undefined;
 
+type Result = { errors: Array<RowError> };
+
+const ERROR_MESSAGES = {
+	InvalidColumnNames: "Invalid column names",
+};
+
+async function validateColumnHeaders(filePath: string): Promise<Result> {
+	const result: Result = { errors: [] };
 	const firstLine = await getFirstLine(filePath);
 	if (firstLine !== VALID_HEADERS) {
-		const output =
-			"row;id;merchant_reference;amount;created_at;errors\n" + "0;;;;;Invalid column names\n";
+		result.errors.push({
+			row: 0,
+			id: "",
+			merchant_reference: "",
+			amount: "",
+			created_at: "",
+			errors: [ERROR_MESSAGES.InvalidColumnNames],
+		});
+	}
+	return result;
+}
 
-		if (!fs.existsSync("./importReport")) {
-			fs.mkdirSync("./importReport");
-		}
+export async function importOrders(filePath: string): Promise<Result> {
+	console.log(`Starting import from file: ${filePath}`);
 
-		fs.writeFileSync("./importReport/report.csv", output);
-		return;
+	const prisma = getDB();
+
+	const result: Result = await validateColumnHeaders(filePath);
+
+	if (result.errors.length > 0) {
+		await writeOutputCSV(result);
+		return result;
 	}
 
-	parser.on("data", async (csvrow) => {
-		rowCount++;
-
-		const externalId = String(csvrow[0]);
-		const merchantReference = csvrow[1];
-		const amount = Number(csvrow[2]);
-		const transactionDate = new Date(csvrow[3]);
-
-		const merchant = await prisma.merchant.findFirst({ where: { reference: merchantReference } });
-
-		await prisma.order.create({
-			data: { externalId, merchantId: merchant.id, amount, transactionDate },
-		});
-
-		console.log(`Processing row ${rowCount}: ${externalId}`);
+	const parser = parse({
+		columns: true,
+		delimiter: ";",
+		skipRecordsWithEmptyValues: true,
+		info: true,
+		cast: true,
 	});
 
-	await pipeline(fs.createReadStream(filePath), parser);
+	async function processRowResults(iterable: AsyncIterable<ProcessedRowResult>) {
+		for await (const processedRowResult of iterable) {
+			if (processedRowResult && processedRowResult.errors.length > 0) {
+				result.errors.push(processedRowResult);
+			}
+		}
+	}
+	async function* processRowAsync(source: Parser) {
+		for await (const chunk of source) {
+			try {
+				// eslint-disable-next-line
+				yield await processRow(chunk, prisma);
+			} catch (error) {
+				console.error(error);
+				break;
+			}
+		}
+	}
 
-	console.log(`Import finished! Total rows processed: ${rowCount}`);
-	return;
+	await pipeline(fs.createReadStream(filePath), parser, processRowAsync, processRowResults);
+
+	await writeOutputCSV(result);
+	return result;
 }
 
 async function getFirstLine(filePath: string): Promise<string> {
@@ -63,4 +103,43 @@ async function getFirstLine(filePath: string): Promise<string> {
 	});
 	readable.close();
 	return line;
+}
+
+async function processRow(
+	{ info, record }: { info: Info; record: OrderRecord },
+	prisma: PrismaClient,
+) {
+	const orderRecord = record;
+	const HEADERS_ROW = 1;
+	processedRows = info.records + HEADERS_ROW;
+
+	const merchant = await prisma.merchant.findFirst({
+		where: { reference: orderRecord.merchant_reference },
+	});
+
+	await prisma.order.create({
+		data: {
+			externalId: orderRecord.id,
+			merchantId: merchant.id,
+			amount: orderRecord.amount,
+			transactionDate: new Date(orderRecord.created_at),
+		},
+	});
+
+	console.log("processedRows", processedRows);
+}
+
+async function writeOutputCSV(result: Result) {
+	const formattedErrors = result.errors.map((error) => ({
+		...error,
+		errors: error.errors.join(" | "),
+	}));
+
+	const output = stringify(formattedErrors, { header: true, delimiter: ";" });
+
+	if (!fs.existsSync("./importReport")) {
+		fs.mkdirSync("./importReport");
+	}
+
+	fs.writeFileSync("./importReport/report.csv", output);
 }
