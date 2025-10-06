@@ -54,8 +54,6 @@ describe("Given a GET request to /orders", () => {
 		expect(response.status).toBe(200);
 		const body = response.body;
 
-		expect(body.data[0].externalId).toEqual("e653f3e14bc4");
-
 		expect(body.data).toStrictEqual([
 			{
 				id: expect.any(String),

@@ -12,7 +12,7 @@ export async function importMerchants(filePath: string): Promise<void> {
 	console.log(`Starting import from file: ${filePath}`);
 
 	const parser = parse({ delimiter: ";", from_line: 2 });
-	const insertPromises: Promise<Merchant>[] = [];
+	const insertOrUpdatePromises: Promise<Merchant>[] = [];
 
 	let rowCount = 0;
 
@@ -30,7 +30,7 @@ export async function importMerchants(filePath: string): Promise<void> {
 
 		console.log(`Processing row ${rowCount}: ${data.reference}`);
 
-		insertPromises.push(
+		insertOrUpdatePromises.push(
 			prisma.merchant.upsert({
 				where: { id: data.id },
 				update: {
@@ -46,6 +46,6 @@ export async function importMerchants(filePath: string): Promise<void> {
 
 	await pipeline(fs.createReadStream(filePath), parser);
 
-	await Promise.all(insertPromises);
+	await Promise.all(insertOrUpdatePromises);
 	console.log(`Import finished! Total rows processed: ${rowCount}`);
 }
