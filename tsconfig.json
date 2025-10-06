@@ -17,6 +17,7 @@
     "skipLibCheck": true,
     "strict": true,
     "resolveJsonModule": true,
+    "ignoreDeprecations":"6.0",
     "baseUrl": ".",
     "paths": {
       "@/src/*": ["src/*"],

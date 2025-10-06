@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import path from "node:path";
 
 import {
@@ -5,7 +6,7 @@ import {
 	PrismaClient,
 } from "@prisma/client";
 import { StartedPostgreSqlContainer } from "@testcontainers/postgresql";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { getDB } from "../../src/__shared__/infrastructure/db";
 import { importOrders } from "../../src/cli/order/orderImporter";
@@ -27,6 +28,19 @@ describe("Import order", () => {
 	afterAll(async () => {
 		await prisma.$disconnect();
 		await container.stop();
+	});
+
+	it("WHEN csv column headers are invalid THEN it return an error message", async () => {
+		const spy = vi.spyOn(fs, "writeFileSync").mockImplementation(() => {});
+		const filePath = getFilePath("invalidColumns_orders.csv");
+
+		await importOrders(filePath);
+
+		const expected =
+			"row;id;merchant_reference;amount;created_at;errors\n" + "0;;;;;Invalid column names\n";
+
+		expect(fs.writeFileSync).toHaveBeenCalledWith("./importReport/report.csv", expected);
+		spy.mockRestore();
 	});
 
 	it("WHEN csv is imported THEN database is populated", async () => {
