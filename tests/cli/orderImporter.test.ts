@@ -44,8 +44,16 @@ describe("Import order", () => {
 
 	it("WHEN csv is imported THEN database is populated", async () => {
 		//todo: builder
-		await prisma.merchant.create({
-			data: {
+		await prisma.merchant.upsert({
+			where: { id: "86312006-4d7e-45c4-9c28-788f4aa68a62" },
+			update: {
+				reference: "padberg_group",
+				email: "info@padberg-group.com",
+				liveOn: new Date("2023-02-01T00:00:00.000Z"),
+				disbursementFrequency: DisbursementFrequencyType.DAILY,
+				minimumMonthlyFee: 0.0,
+			},
+			create: {
 				id: "86312006-4d7e-45c4-9c28-788f4aa68a62",
 				reference: "padberg_group",
 				email: "info@padberg-group.com",
