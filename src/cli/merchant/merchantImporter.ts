@@ -6,10 +6,11 @@ import { parse } from "csv-parse";
 import { Merchant } from "@/src/merchant/domain/merchant";
 
 import { getDB } from "../../__shared__/infrastructure/db";
+import { logger } from "../../__shared__/infrastructure/logger";
 
 export async function importMerchants(filePath: string): Promise<void> {
 	const prisma = getDB();
-	console.log(`Starting import from file: ${filePath}`);
+	logger.info(`Starting import from file: ${filePath}`);
 
 	const parser = parse({ delimiter: ";", from_line: 2 });
 	const insertOrUpdatePromises: Promise<Merchant>[] = [];
@@ -28,7 +29,7 @@ export async function importMerchants(filePath: string): Promise<void> {
 			minimumMonthlyFee: Number(csvrow[5]),
 		};
 
-		console.log(`Processing row ${rowCount}: ${data.reference}`);
+		logger.info(`Processing row ${rowCount}: ${data.reference}`);
 
 		insertOrUpdatePromises.push(
 			prisma.merchant.upsert({
@@ -47,5 +48,5 @@ export async function importMerchants(filePath: string): Promise<void> {
 	await pipeline(fs.createReadStream(filePath), parser);
 
 	await Promise.all(insertOrUpdatePromises);
-	console.log(`Import finished! Total rows processed: ${rowCount}`);
+	logger.info(`Import finished! Total rows processed: ${rowCount}`);
 }

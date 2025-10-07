@@ -7,6 +7,7 @@ import { Info, parse, Parser } from "csv-parse";
 import { stringify } from "csv-stringify/sync";
 
 import { getDB } from "../../__shared__/infrastructure/db";
+import { logger } from "../../__shared__/infrastructure/logger";
 
 const VALID_HEADERS = "id;merchant_reference;amount;created_at";
 let processedRows: number;
@@ -40,7 +41,7 @@ async function flushBatch(prisma: PrismaClient) {
 }
 
 export async function importOrders(filePath: string): Promise<Result> {
-	console.log(`Starting import from file: ${filePath}`);
+	logger.info(`Starting import from file: ${filePath}`);
 	console.time("Execution Time");
 
 	const result: Result = await validateColumnHeaders(filePath);
@@ -56,7 +57,7 @@ export async function importOrders(filePath: string): Promise<Result> {
 	console.timeEnd("Load merchants");
 
 	const merchantMap = new Map(merchants.map((m) => [m.reference, m.id]));
-	console.log(`Loaded ${merchantMap.size} merchants into memory`);
+	logger.info(`Loaded ${merchantMap.size} merchants into memory`);
 
 	const parser = parse({
 		columns: true,
@@ -134,7 +135,7 @@ async function processRow(
 	}
 
 	if (processedRows % 10000 === 0) {
-		console.log("processedRows", processedRows);
+		logger.info(processedRows, "processedRows");
 	}
 }
 
