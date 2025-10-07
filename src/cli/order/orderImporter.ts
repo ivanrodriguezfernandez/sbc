@@ -23,7 +23,10 @@ type RowError = { row: number; errors: Array<string> } & OrderRecord;
 type ProcessedRowResult = RowError | undefined;
 type Result = { errors: Array<RowError> };
 
-const ERROR_MESSAGES = { InvalidColumnNames: "Invalid column names" };
+const ERROR_MESSAGES = {
+	InvalidColumnNames: "Invalid column names",
+	MerchantReferenceMandatory: "merchant_reference is mandatory",
+};
 
 const BATCH_SIZE = 1000;
 const orderBuffer: Array<{
@@ -77,7 +80,6 @@ export async function importOrders(filePath: string): Promise<Result> {
 	async function* processRowAsync(source: Parser) {
 		for await (const chunk of source) {
 			try {
-				// eslint-disable-next-line
 				yield await processRow(chunk, prisma, merchantMap);
 			} catch (error) {
 				console.error(error);
@@ -113,9 +115,22 @@ async function processRow(
 	prisma: PrismaClient,
 	merchantMap: Map<string, string>,
 ) {
+	const errors = [];
 	const orderRecord = record;
 	const HEADERS_ROW = 1;
+	const HEADER_EMPTY_ROW = 1;
+	const row = info.records + HEADERS_ROW + HEADER_EMPTY_ROW;
+	console.log(info.records, HEADERS_ROW, HEADER_EMPTY_ROW);
 	processedRows = info.records + HEADERS_ROW;
+
+	if (orderRecord.merchant_reference === "") {
+		errors.push(ERROR_MESSAGES.MerchantReferenceMandatory);
+	}
+
+	if (errors.length > 0) {
+		const result = { row, ...orderRecord, errors };
+		return result;
+	}
 
 	const merchantId = merchantMap.get(orderRecord.merchant_reference);
 	if (merchantId == undefined) {
@@ -150,7 +165,7 @@ async function writeOutputCSV(result: Result) {
 	if (!fs.existsSync("./importReport")) {
 		fs.mkdirSync("./importReport");
 	}
-
+	console.log(" writeOutputCSV", output);
 	fs.writeFileSync("./importReport/report.csv", output);
 }
 

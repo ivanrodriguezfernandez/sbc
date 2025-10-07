@@ -30,7 +30,19 @@ describe("Import order", () => {
 		await prisma.merchant.deleteMany();
 	});
 
-	it.todo("WHEN merchant doesn't exit", () => {});
+	it("WHEN there is a row that does not have a merchant_reference THEN we return an error message", async () => {
+		const spy = vi.spyOn(fs, "writeFileSync").mockImplementation(() => {});
+		const filePath = getFilePath("withoutMerchanReference.csv");
+
+		await importOrders(filePath);
+		const expected =
+			"row;id;merchant_reference;amount;created_at;errors\n" +
+			"3;e653f3e14bc1;;100.20;2023-02-02;merchant_reference is mandatory\n" +
+			"4;a948cc2344d1;;102.29;2023-03-03;merchant_reference is mandatory\n";
+
+		expect(fs.writeFileSync).toHaveBeenCalledWith("./importReport/report.csv", expected);
+		spy.mockRestore();
+	});
 
 	it("WHEN csv column headers are invalid THEN it return an error message", async () => {
 		const spy = vi.spyOn(fs, "writeFileSync").mockImplementation(() => {});
