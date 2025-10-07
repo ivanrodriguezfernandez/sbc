@@ -24,6 +24,21 @@ type Result = { errors: Array<RowError> };
 
 const ERROR_MESSAGES = { InvalidColumnNames: "Invalid column names" };
 
+const BATCH_SIZE = 1000;
+const orderBuffer: Array<{
+	externalId: string;
+	merchantId: string;
+	amount: number | string;
+	transactionDate: Date;
+}> = [];
+
+async function flushBatch(prisma: PrismaClient) {
+	if (orderBuffer.length === 0) return;
+
+	await prisma.order.createMany({ data: orderBuffer });
+	orderBuffer.length = 0;
+}
+
 export async function importOrders(filePath: string): Promise<Result> {
 	console.log(`Starting import from file: ${filePath}`);
 	console.time("Execution Time");
@@ -72,6 +87,8 @@ export async function importOrders(filePath: string): Promise<Result> {
 
 	await pipeline(fs.createReadStream(filePath), parser, processRowAsync, processRowResults);
 
+	await flushBatch(prisma); // Make sure to flush the buffer at the end
+
 	await writeOutputCSV(result);
 	console.timeEnd("Execution Time");
 	return result;
@@ -108,14 +125,26 @@ async function processRow(
 		console.warn(`Merchant not found: ${orderRecord.merchant_reference}`);
 		return;
 	}
-	const data = {
+
+	orderBuffer.push({
 		externalId: orderRecord.id,
-		merchantId: merchantId,
+		merchantId,
 		amount: orderRecord.amount,
 		transactionDate: new Date(orderRecord.created_at),
-	};
+	});
 
-	await prisma.order.create({ data: data });
+	if (orderBuffer.length >= BATCH_SIZE) {
+		await flushBatch(prisma);
+	}
+
+	// const data = {
+	// 	externalId: orderRecord.id,
+	// 	merchantId: merchantId,
+	// 	amount: orderRecord.amount,
+	// 	transactionDate: new Date(orderRecord.created_at),
+	// };
+
+	// await prisma.order.create({ data: data });
 
 	if (processedRows % 10000 === 0) {
 		console.log("processedRows", processedRows);
