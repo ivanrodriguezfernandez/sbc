@@ -1,5 +1,4 @@
 import fs from "node:fs";
-import * as readline from "node:readline/promises";
 
 import { parse } from "csv-parse";
 
@@ -10,7 +9,7 @@ const BATCH_SIZE = 1000;
 const HEADERS = "id;merchant_reference;amount;created_at";
 
 const ERROR_MESSAGES = {
-	InvalidColumnNames: "Invalid column names",
+	InvalidCSVHeaders: "Invalid CSV headers",
 	MerchantReferenceMandatory: "merchant_reference is mandatory",
 };
 
@@ -34,17 +33,23 @@ export async function importOrders(filePath: string): Promise<void> {
 	logger.info(`Starting import from file: ${filePath}`);
 	console.time("Execution Time");
 
-	const result = await validateColumnHeaders(filePath);
-
-	if (!result.isValid) {
-		await writeOutputCSV(result.output);
-		return;
-	}
 	let buffer: OrderToInsert[] = [];
 
-	const parser = fs
-		.createReadStream(filePath)
-		.pipe(parse({ delimiter: ";", columns: true, skip_empty_lines: true }));
+	const expectedHeaders = ["id", "merchant_reference", "amount", "created_at"];
+
+	const parser = fs.createReadStream(filePath).pipe(
+		parse({
+			delimiter: ";",
+			skip_empty_lines: true,
+			columns: (headerRow) => {
+				const invalid = expectedHeaders.some((h, i) => h !== headerRow[i]?.trim());
+				if (invalid) {
+					throw new Error(ERROR_MESSAGES.InvalidCSVHeaders);
+				}
+				return expectedHeaders;
+			},
+		}),
+	);
 
 	let rowNumber = 0;
 	const errors: RowError[] = [];
@@ -107,23 +112,6 @@ async function validateRow(record: OrderRecord, rowNumber: number): Promise<Vali
 	return { isSuccess: true, rowError: null };
 }
 
-async function validateColumnHeaders(
-	filePath: string,
-): Promise<{ isValid: boolean; output: string }> {
-	const HEADERS = "id;merchant_reference;amount;created_at";
-
-	const firstLine = await getFirstLine(filePath);
-
-	if (HEADERS !== firstLine) {
-		logger.error("Invalid CSV headers, aborting import.");
-		return {
-			isValid: false,
-			output: `row;${HEADERS};errors\n0;;;;;${ERROR_MESSAGES.InvalidColumnNames}\n`,
-		};
-	}
-	return { isValid: true, output: "" };
-}
-
 async function writeOutputCSV(output: string) {
 	if (!fs.existsSync("./importReport")) {
 		fs.mkdirSync("./importReport");
@@ -132,18 +120,6 @@ async function writeOutputCSV(output: string) {
 	fs.writeFileSync("./importReport/report.csv", output);
 }
 
-async function getFirstLine(filePath: string): Promise<string> {
-	const readable = fs.createReadStream(filePath);
-	const reader = readline.createInterface({ input: readable });
-	const line: string = await new Promise((resolve) => {
-		reader.on("line", (line) => {
-			reader.close();
-			resolve(line);
-		});
-	});
-	readable.close();
-	return line;
-}
 async function getMerchantsMap(): Promise<Map<string, string>> {
 	const prisma = getDB();
 	console.time("Load merchants");
