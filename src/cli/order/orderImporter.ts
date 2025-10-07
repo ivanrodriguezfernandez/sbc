@@ -1,7 +1,6 @@
 import fs from "node:fs";
 import * as readline from "node:readline/promises";
 
-import { PrismaClient } from "@prisma/client/extension";
 import { parse } from "csv-parse";
 
 import { getDB } from "../../__shared__/infrastructure/db";
@@ -30,7 +29,6 @@ type OrderToInsert = {
 	amount: number;
 	transactionDate: Date;
 };
-let buffer: OrderToInsert[] = [];
 
 export async function importOrders(filePath: string): Promise<void> {
 	logger.info(`Starting import from file: ${filePath}`);
@@ -42,8 +40,7 @@ export async function importOrders(filePath: string): Promise<void> {
 		await writeOutputCSV(result.output);
 		return;
 	}
-
-	const merchansts = await getMerchantsMap();
+	let buffer: OrderToInsert[] = [];
 
 	const parser = fs
 		.createReadStream(filePath)
@@ -52,13 +49,28 @@ export async function importOrders(filePath: string): Promise<void> {
 	let rowNumber = 0;
 	const errors: RowError[] = [];
 	const prisma = getDB();
+	const merchants = await getMerchantsMap();
 
 	for await (const record of parser) {
 		rowNumber++;
-		const rowError = await processRow(record, merchansts, rowNumber, prisma);
-		if (rowError) {
-			errors.push(rowError);
+		const result = await ValidateRowResult(record, rowNumber);
+		if (!result.isSuccess) {
+			errors.push(result.rowError as RowError);
+			continue;
 		}
+
+		buffer.push({
+			externalId: record.id,
+			merchantId: merchants.get(record.merchant_reference),
+			amount: Number(record.amount),
+			transactionDate: new Date(record.created_at),
+		});
+
+		if (buffer.length >= BATCH_SIZE) {
+			await prisma.order.createMany({ data: buffer, skipDuplicates: true });
+			buffer = [];
+		}
+		if (rowNumber % 10000 === 0) logger.info(`${rowNumber} rows processed`);
 	}
 
 	if (buffer.length > 0) {
@@ -76,12 +88,12 @@ export async function importOrders(filePath: string): Promise<void> {
 	console.timeEnd("Execution Time");
 }
 
-async function processRow(
+type ValidateRowResult = { isSuccess: boolean; rowError: RowError | null };
+
+async function ValidateRowResult(
 	record: OrderRecord,
-	merchants: Map<string, string>,
 	rowNumber: number,
-	prisma: PrismaClient,
-) {
+): Promise<ValidateRowResult> {
 	const errors = [];
 	const orderRecord = record;
 	const HEADERS_ROW = 1;
@@ -93,22 +105,9 @@ async function processRow(
 
 	if (errors.length > 0) {
 		const result = { row, ...orderRecord, errors };
-		return result;
+		return { isSuccess: false, rowError: result };
 	}
-	const merchantId = merchants.get(record.merchant_reference);
-	buffer.push({
-		externalId: record.id,
-		merchantId,
-		amount: Number(record.amount),
-		transactionDate: new Date(record.created_at),
-	});
-
-	if (buffer.length >= BATCH_SIZE) {
-		await prisma.order.createMany({ data: buffer, skipDuplicates: true });
-		buffer = [];
-	}
-
-	if (rowNumber % 10000 === 0) logger.info(`${rowNumber} rows processed`);
+	return { isSuccess: true, rowError: null };
 }
 
 async function validateColumnHeaders(
