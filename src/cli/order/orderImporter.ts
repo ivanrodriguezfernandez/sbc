@@ -10,7 +10,6 @@ import { getDB } from "../../__shared__/infrastructure/db";
 import { logger } from "../../__shared__/infrastructure/logger";
 
 const VALID_HEADERS = "id;merchant_reference;amount;created_at";
-let processedRows: number;
 
 type OrderRecord = {
 	id: string;
@@ -77,13 +76,16 @@ export async function importOrders(filePath: string): Promise<Result> {
 			}
 		}
 	}
+
+	// Async generator (*) that processes CSV rows
 	async function* processRowAsync(source: Parser) {
 		for await (const chunk of source) {
 			try {
+				// Process each row and yield the result so it can be consumed by the next stage in the pipeline
 				yield await processRow(chunk, prisma, merchantMap);
 			} catch (error) {
 				console.error(error);
-				break;
+				break; // Stop processing if something goes wrong to avoid blocking the stream.
 			}
 		}
 	}
