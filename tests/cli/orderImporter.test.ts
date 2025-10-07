@@ -46,7 +46,10 @@ describe("Import order", () => {
 
 	it("WHEN csv column headers are invalid THEN it return an error message", async () => {
 		const filePath = getFilePath("invalidColumns_orders.csv");
-		await expect(importOrders(filePath)).rejects.toThrow("Invalid CSV headers");
+
+		await expect(async () => {
+			await importOrders(filePath);
+		}).rejects.toThrow("Invalid CSV headers");
 	});
 
 	it("WHEN csv is imported twice THEN existing merchants are updated, not duplicated", async () => {

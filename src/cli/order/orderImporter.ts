@@ -33,21 +33,15 @@ export async function importOrders(filePath: string): Promise<void> {
 	logger.info(`Starting import from file: ${filePath}`);
 	console.time("Execution Time");
 
-	let buffer: OrderToInsert[] = [];
+	await validateCSVHeaders(filePath);
 
-	const expectedHeaders = ["id", "merchant_reference", "amount", "created_at"];
+	let buffer: OrderToInsert[] = [];
 
 	const parser = fs.createReadStream(filePath).pipe(
 		parse({
 			delimiter: ";",
 			skip_empty_lines: true,
-			columns: (headerRow) => {
-				const invalid = expectedHeaders.some((h, i) => h !== headerRow[i]?.trim());
-				if (invalid) {
-					throw new Error(ERROR_MESSAGES.InvalidCSVHeaders);
-				}
-				return expectedHeaders;
-			},
+			columns: true,
 		}),
 	);
 
@@ -128,4 +122,33 @@ async function getMerchantsMap(): Promise<Map<string, string>> {
 	console.timeEnd("Load merchants");
 	logger.info(`Loaded ${merchantMap.size} merchants`);
 	return merchantMap;
+}
+
+async function validateCSVHeaders(filePath: string): Promise<void> {
+	return new Promise((resolve, reject) => {
+		const expectedHeaders = ["id", "merchant_reference", "amount", "created_at"];
+
+		const stream = fs.createReadStream(filePath);
+		const parser = stream.pipe(
+			parse({
+				delimiter: ";",
+				to_line: 1,
+			}),
+		);
+
+		parser.on("data", (row) => {
+			const normalizedHeaders = row.map((h: string) => h.trim());
+			const invalid = expectedHeaders.some((expected, i) => expected !== normalizedHeaders[i]);
+			if (invalid) {
+				reject(new Error(ERROR_MESSAGES.InvalidCSVHeaders));
+			} else {
+				resolve();
+			}
+		});
+
+		parser.on("error", reject);
+		parser.on("end", () => {
+			resolve();
+		});
+	});
 }
