@@ -116,10 +116,6 @@ async function processRow(
 	const HEADERS_ROW = 1;
 	processedRows = info.records + HEADERS_ROW;
 
-	// const merchant = await prisma.merchant.findFirst({
-	// 	where: { reference: orderRecord.merchant_reference },
-	// });
-
 	const merchantId = merchantMap.get(orderRecord.merchant_reference);
 	if (merchantId == undefined) {
 		console.warn(`Merchant not found: ${orderRecord.merchant_reference}`);
@@ -136,15 +132,6 @@ async function processRow(
 	if (orderBuffer.length >= BATCH_SIZE) {
 		await flushBatch(prisma);
 	}
-
-	// const data = {
-	// 	externalId: orderRecord.id,
-	// 	merchantId: merchantId,
-	// 	amount: orderRecord.amount,
-	// 	transactionDate: new Date(orderRecord.created_at),
-	// };
-
-	// await prisma.order.create({ data: data });
 
 	if (processedRows % 10000 === 0) {
 		console.log("processedRows", processedRows);
