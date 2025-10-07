@@ -18,40 +18,15 @@ type OrderRecord = {
 	created_at: Date | string;
 };
 
-type RowError = {
-	row: number;
-	errors: Array<string>;
-} & OrderRecord;
-
+type RowError = { row: number; errors: Array<string> } & OrderRecord;
 type ProcessedRowResult = RowError | undefined;
-
 type Result = { errors: Array<RowError> };
 
-const ERROR_MESSAGES = {
-	InvalidColumnNames: "Invalid column names",
-};
-
-async function validateColumnHeaders(filePath: string): Promise<Result> {
-	const result: Result = { errors: [] };
-	const firstLine = await getFirstLine(filePath);
-	if (firstLine !== VALID_HEADERS) {
-		result.errors.push({
-			row: 0,
-			id: "",
-			merchant_reference: "",
-			amount: "",
-			created_at: "",
-			errors: [ERROR_MESSAGES.InvalidColumnNames],
-		});
-	}
-	return result;
-}
+const ERROR_MESSAGES = { InvalidColumnNames: "Invalid column names" };
 
 export async function importOrders(filePath: string): Promise<Result> {
 	console.log(`Starting import from file: ${filePath}`);
 	console.time("Execution Time");
-
-	const prisma = getDB();
 
 	const result: Result = await validateColumnHeaders(filePath);
 
@@ -59,6 +34,14 @@ export async function importOrders(filePath: string): Promise<Result> {
 		await writeOutputCSV(result);
 		return result;
 	}
+
+	const prisma = getDB();
+	console.time("Load merchants");
+	const merchants = await prisma.merchant.findMany({ select: { id: true, reference: true } });
+	console.timeEnd("Load merchants");
+
+	const merchantMap = new Map(merchants.map((m) => [m.reference, m.id]));
+	console.log(`Loaded ${merchantMap.size} merchants into memory`);
 
 	const parser = parse({
 		columns: true,
@@ -79,7 +62,7 @@ export async function importOrders(filePath: string): Promise<Result> {
 		for await (const chunk of source) {
 			try {
 				// eslint-disable-next-line
-				yield await processRow(chunk, prisma);
+				yield await processRow(chunk, prisma, merchantMap);
 			} catch (error) {
 				console.error(error);
 				break;
@@ -110,24 +93,31 @@ async function getFirstLine(filePath: string): Promise<string> {
 async function processRow(
 	{ info, record }: { info: Info; record: OrderRecord },
 	prisma: PrismaClient,
+	merchantMap: Map<string, string>,
 ) {
 	const orderRecord = record;
 	const HEADERS_ROW = 1;
 	processedRows = info.records + HEADERS_ROW;
 
-	const merchant = await prisma.merchant.findFirst({
-		where: { reference: orderRecord.merchant_reference },
-	});
+	// const merchant = await prisma.merchant.findFirst({
+	// 	where: { reference: orderRecord.merchant_reference },
+	// });
+
+	const merchantId = merchantMap.get(orderRecord.merchant_reference);
+	if (merchantId == undefined) {
+		console.warn(`Merchant not found: ${orderRecord.merchant_reference}`);
+		return;
+	}
 	const data = {
 		externalId: orderRecord.id,
-		merchantId: merchant.id,
+		merchantId: merchantId,
 		amount: orderRecord.amount,
 		transactionDate: new Date(orderRecord.created_at),
 	};
 
 	await prisma.order.create({ data: data });
 
-	if (processedRows % 1000 === 0) {
+	if (processedRows % 10000 === 0) {
 		console.log("processedRows", processedRows);
 	}
 }
@@ -145,4 +135,20 @@ async function writeOutputCSV(result: Result) {
 	}
 
 	fs.writeFileSync("./importReport/report.csv", output);
+}
+
+async function validateColumnHeaders(filePath: string): Promise<Result> {
+	const result: Result = { errors: [] };
+	const firstLine = await getFirstLine(filePath);
+	if (firstLine !== VALID_HEADERS) {
+		result.errors.push({
+			row: 0,
+			id: "",
+			merchant_reference: "",
+			amount: "",
+			created_at: "",
+			errors: [ERROR_MESSAGES.InvalidColumnNames],
+		});
+	}
+	return result;
 }
