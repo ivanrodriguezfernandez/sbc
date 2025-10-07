@@ -53,7 +53,7 @@ export async function importOrders(filePath: string): Promise<void> {
 
 	for await (const record of parser) {
 		rowNumber++;
-		const result = await ValidateRowResult(record, rowNumber);
+		const result = await validateRow(record, rowNumber);
 		if (!result.isSuccess) {
 			errors.push(result.rowError as RowError);
 			continue;
@@ -90,10 +90,7 @@ export async function importOrders(filePath: string): Promise<void> {
 
 type ValidateRowResult = { isSuccess: boolean; rowError: RowError | null };
 
-async function ValidateRowResult(
-	record: OrderRecord,
-	rowNumber: number,
-): Promise<ValidateRowResult> {
+async function validateRow(record: OrderRecord, rowNumber: number): Promise<ValidateRowResult> {
 	const errors = [];
 	const orderRecord = record;
 	const HEADERS_ROW = 1;
