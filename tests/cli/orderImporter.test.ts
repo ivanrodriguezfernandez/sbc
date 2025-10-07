@@ -45,16 +45,8 @@ describe("Import order", () => {
 	});
 
 	it("WHEN csv column headers are invalid THEN it return an error message", async () => {
-		const spy = vi.spyOn(fs, "writeFileSync").mockImplementation(() => {});
 		const filePath = getFilePath("invalidColumns_orders.csv");
-
-		await importOrders(filePath);
-
-		const expected =
-			"row;id;merchant_reference;amount;created_at;errors\n" + "0;;;;;Invalid column names\n";
-
-		expect(fs.writeFileSync).toHaveBeenCalledWith("./importReport/report.csv", expected);
-		spy.mockRestore();
+		await expect(importOrders(filePath)).rejects.toThrow("Invalid CSV headers");
 	});
 
 	it("WHEN csv is imported twice THEN existing merchants are updated, not duplicated", async () => {
