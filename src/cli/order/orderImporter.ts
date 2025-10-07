@@ -10,8 +10,8 @@ const HEADERS = "id;merchant_reference;amount;created_at";
 
 const ERROR_MESSAGES = {
 	InvalidCSVHeaders: "Invalid CSV headers",
-	MerchantReferenceMandatory: "merchant_reference is mandatory",
-	MerchantReferenceNotFound: "Merchant referente not found",
+	MerchantRefMandatory: "merchant_reference is mandatory",
+	MerchantRefNotFound: "Merchant referente not found",
 };
 
 type OrderRecord = {
@@ -89,28 +89,25 @@ export async function importOrders(filePath: string): Promise<void> {
 type ValidateRowResult = { isSuccess: boolean; rowError: RowError | null };
 
 async function validateRow(
-	record: OrderRecord,
+	order: OrderRecord,
 	rowNumber: number,
 	merchantId: string | undefined,
 ): Promise<ValidateRowResult> {
-	const errors = [];
-	const orderRecord = record;
 	const HEADERS_ROW = 1;
 	const row = rowNumber + HEADERS_ROW;
 
-	if (record.merchant_reference === "") {
-		errors.push(ERROR_MESSAGES.MerchantReferenceMandatory);
-		const result = { row, ...orderRecord, errors };
-		return { isSuccess: false, rowError: result };
+	if (order.merchant_reference === "") {
+		return {
+			isSuccess: false,
+			rowError: { row, ...order, errors: [ERROR_MESSAGES.MerchantRefMandatory] },
+		};
 	}
 
 	if (merchantId === undefined) {
-		errors.push(ERROR_MESSAGES.MerchantReferenceNotFound);
-	}
-
-	if (errors.length > 0) {
-		const result = { row, ...orderRecord, errors };
-		return { isSuccess: false, rowError: result };
+		return {
+			isSuccess: false,
+			rowError: { row, ...order, errors: [ERROR_MESSAGES.MerchantRefNotFound] },
+		};
 	}
 
 	return { isSuccess: true, rowError: null };
