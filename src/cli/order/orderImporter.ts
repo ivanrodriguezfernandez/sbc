@@ -1,102 +1,125 @@
 import fs from "node:fs";
 import * as readline from "node:readline/promises";
-import { pipeline } from "node:stream/promises";
 
-import { PrismaClient } from "@prisma/client/extension";
-import { Info, parse, Parser } from "csv-parse";
-import { stringify } from "csv-stringify/sync";
+import { parse } from "csv-parse";
 
 import { getDB } from "../../__shared__/infrastructure/db";
 import { logger } from "../../__shared__/infrastructure/logger";
 
-const VALID_HEADERS = "id;merchant_reference;amount;created_at";
-
-type OrderRecord = {
-	id: string;
-	merchant_reference: string;
-	amount: number | string;
-	created_at: Date | string;
-};
-
-type RowError = { row: number; errors: Array<string> } & OrderRecord;
-type ProcessedRowResult = RowError | undefined;
-type Result = { errors: Array<RowError> };
+const BATCH_SIZE = 1000;
 
 const ERROR_MESSAGES = {
 	InvalidColumnNames: "Invalid column names",
 	MerchantReferenceMandatory: "merchant_reference is mandatory",
 };
 
-const BATCH_SIZE = 1000;
-const orderBuffer: Array<{
+type OrderRecord = {
+	id: string;
+	merchant_reference: string;
+	amount: string;
+	created_at: string;
+};
+
+type RowError = OrderRecord & { row: number; errors: string[] };
+
+type OrderToInsert = {
 	externalId: string;
 	merchantId: string;
-	amount: number | string;
+	amount: number;
 	transactionDate: Date;
-}> = [];
+};
 
-async function flushBatch(prisma: PrismaClient) {
-	if (orderBuffer.length === 0) return;
-
-	await prisma.order.createMany({ data: orderBuffer, skipDuplicates: true });
-	orderBuffer.length = 0;
-}
-
-export async function importOrders(filePath: string): Promise<Result> {
-	logger.info(`Starting import from file: ${filePath}`);
+export async function importOrders(filePath: string): Promise<void> {
 	console.time("Execution Time");
+	logger.info(`Starting import from file: ${filePath}`);
 
-	const result: Result = await validateColumnHeaders(filePath);
+	const result = await validateColumnHeaders(filePath);
 
-	if (result.errors.length > 0) {
-		await writeOutputCSV(result);
-		return result;
+	if (!result.isValid) {
+		await writeOutputCSV(result.output);
+		return;
 	}
+
+	const merchansts = await getMerchantsMap();
+
+	let buffer: OrderToInsert[] = [];
+	let rowNumber = 0;
+	const importErrors: string[] = [];
 
 	const prisma = getDB();
-	console.time("Load merchants");
-	const merchants = await prisma.merchant.findMany({ select: { id: true, reference: true } });
-	console.timeEnd("Load merchants");
 
-	const merchantMap = new Map(merchants.map((m) => [m.reference, m.id]));
-	logger.info(`Loaded ${merchantMap.size} merchants into memory`);
+	const parser = fs
+		.createReadStream(filePath)
+		.pipe(parse({ delimiter: ";", columns: true, skip_empty_lines: true }));
 
-	const parser = parse({
-		columns: true,
-		delimiter: ";",
-		skipRecordsWithEmptyValues: true,
-		info: true,
-		cast: false,
-	});
+	for await (const record of parser) {
+		rowNumber++;
 
-	async function processRowResults(iterable: AsyncIterable<ProcessedRowResult>) {
-		for await (const processedRowResult of iterable) {
-			if (processedRowResult && processedRowResult.errors.length > 0) {
-				result.errors.push(processedRowResult);
+		if (record.merchant_reference === "") {
+			const error =
+				Number(rowNumber + 1) +
+				";" +
+				record.id +
+				";" +
+				record.merchant_reference +
+				";" +
+				record.amount +
+				";" +
+				record.created_at +
+				";" +
+				ERROR_MESSAGES.MerchantReferenceMandatory;
+
+			importErrors.push(error);
+		} else {
+			const merchantId = merchansts.get(record.merchant_reference);
+			buffer.push({
+				externalId: record.id,
+				merchantId,
+				amount: Number(record.amount),
+				transactionDate: new Date(record.created_at),
+			});
+
+			if (buffer.length >= BATCH_SIZE) {
+				await prisma.order.createMany({ data: buffer, skipDuplicates: true });
+				buffer = [];
 			}
 		}
+
+		if (rowNumber % 10000 === 0) logger.info(`${rowNumber} rows processed`);
 	}
 
-	// Async generator (*) that processes CSV rows
-	async function* processRowAsync(source: Parser) {
-		for await (const chunk of source) {
-			try {
-				// Process each row and yield the result so it can be consumed by the next stage in the pipeline
-				yield await processRow(chunk, prisma, merchantMap);
-			} catch (error) {
-				console.error(error);
-				break; // Stop processing if something goes wrong to avoid blocking the stream.
-			}
-		}
+	if (buffer.length > 0) {
+		await prisma.order.createMany({ data: buffer, skipDuplicates: true });
 	}
 
-	await pipeline(fs.createReadStream(filePath), parser, processRowAsync, processRowResults);
+	importErrors.unshift("row;id;merchant_reference;amount;created_at;errors");
+	console.log("final resultado", importErrors);
+	await writeOutputCSV(importErrors.join("\n") + "\n");
+}
 
-	await flushBatch(prisma); // Make sure to flush the buffer at the end
+async function validateColumnHeaders(
+	filePath: string,
+): Promise<{ isValid: boolean; output: string }> {
+	const HEADERS = "id;merchant_reference;amount;created_at";
 
-	await writeOutputCSV(result);
-	console.timeEnd("Execution Time");
-	return result;
+	const firstLine = await getFirstLine(filePath);
+
+	if (HEADERS !== firstLine) {
+		logger.error("Invalid CSV headers, aborting import.");
+		return {
+			isValid: false,
+			output: `row;${HEADERS};errors\n0;;;;;${ERROR_MESSAGES.InvalidColumnNames}\n`,
+		};
+	}
+	return { isValid: true, output: "" };
+}
+
+async function writeOutputCSV(output: string) {
+	if (!fs.existsSync("./importReport")) {
+		fs.mkdirSync("./importReport");
+	}
+
+	fs.writeFileSync("./importReport/report.csv", output);
 }
 
 async function getFirstLine(filePath: string): Promise<string> {
@@ -111,74 +134,12 @@ async function getFirstLine(filePath: string): Promise<string> {
 	readable.close();
 	return line;
 }
-
-async function processRow(
-	{ info, record }: { info: Info; record: OrderRecord },
-	prisma: PrismaClient,
-	merchantMap: Map<string, string>,
-) {
-	const errors = [];
-	const orderRecord = record;
-	const HEADERS_ROW = 1;
-	const row = info.records + HEADERS_ROW;
-
-	if (orderRecord.merchant_reference === "") {
-		errors.push(ERROR_MESSAGES.MerchantReferenceMandatory);
-	}
-
-	if (errors.length > 0) {
-		const result = { row, ...orderRecord, errors };
-		return result;
-	}
-
-	const merchantId = merchantMap.get(orderRecord.merchant_reference);
-	if (merchantId == undefined) {
-		console.warn(`Merchant not found: ${orderRecord.merchant_reference}`);
-		return;
-	}
-
-	orderBuffer.push({
-		externalId: orderRecord.id,
-		merchantId,
-		amount: orderRecord.amount,
-		transactionDate: new Date(orderRecord.created_at),
-	});
-
-	if (orderBuffer.length >= BATCH_SIZE) {
-		await flushBatch(prisma);
-	}
-
-	if (row % 10000 === 0) {
-		logger.info(row, "processedRows");
-	}
-}
-
-async function writeOutputCSV(result: Result) {
-	const formattedErrors = result.errors.map((error) => ({
-		...error,
-		errors: error.errors.join(" | "),
-	}));
-
-	const output = stringify(formattedErrors, { header: true, delimiter: ";" });
-
-	if (!fs.existsSync("./importReport")) {
-		fs.mkdirSync("./importReport");
-	}
-	fs.writeFileSync("./importReport/report.csv", output);
-}
-
-async function validateColumnHeaders(filePath: string): Promise<Result> {
-	const result: Result = { errors: [] };
-	const firstLine = await getFirstLine(filePath);
-	if (firstLine !== VALID_HEADERS) {
-		result.errors.push({
-			row: 0,
-			id: "",
-			merchant_reference: "",
-			amount: "",
-			created_at: "",
-			errors: [ERROR_MESSAGES.InvalidColumnNames],
-		});
-	}
-	return result;
+async function getMerchantsMap() {
+	const prisma = getDB();
+	console.time("Load merchants");
+	const merchants = await prisma.merchant.findMany({ select: { id: true, reference: true } });
+	const merchantMap = new Map(merchants.map((m) => [m.reference, m.id]));
+	console.timeEnd("Load merchants");
+	logger.info(`Loaded ${merchantMap.size} merchants`);
+	return merchantMap;
 }
