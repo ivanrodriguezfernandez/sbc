@@ -49,6 +49,7 @@ async function validateColumnHeaders(filePath: string): Promise<Result> {
 
 export async function importOrders(filePath: string): Promise<Result> {
 	console.log(`Starting import from file: ${filePath}`);
+	console.time("Execution Time");
 
 	const prisma = getDB();
 
@@ -64,7 +65,7 @@ export async function importOrders(filePath: string): Promise<Result> {
 		delimiter: ";",
 		skipRecordsWithEmptyValues: true,
 		info: true,
-		cast: true,
+		cast: false,
 	});
 
 	async function processRowResults(iterable: AsyncIterable<ProcessedRowResult>) {
@@ -89,6 +90,7 @@ export async function importOrders(filePath: string): Promise<Result> {
 	await pipeline(fs.createReadStream(filePath), parser, processRowAsync, processRowResults);
 
 	await writeOutputCSV(result);
+	console.timeEnd("Execution Time");
 	return result;
 }
 
@@ -116,17 +118,18 @@ async function processRow(
 	const merchant = await prisma.merchant.findFirst({
 		where: { reference: orderRecord.merchant_reference },
 	});
+	const data = {
+		externalId: orderRecord.id,
+		merchantId: merchant.id,
+		amount: orderRecord.amount,
+		transactionDate: new Date(orderRecord.created_at),
+	};
 
-	await prisma.order.create({
-		data: {
-			externalId: orderRecord.id,
-			merchantId: merchant.id,
-			amount: orderRecord.amount,
-			transactionDate: new Date(orderRecord.created_at),
-		},
-	});
+	await prisma.order.create({ data: data });
 
-	console.log("processedRows", processedRows);
+	if (processedRows % 1000 === 0) {
+		console.log("processedRows", processedRows);
+	}
 }
 
 async function writeOutputCSV(result: Result) {
