@@ -37,8 +37,8 @@ describe("Import order", () => {
 		await importOrders(filePath);
 		const expected =
 			"row;id;merchant_reference;amount;created_at;errors\n" +
-			"3;e653f3e14bc1;;100.20;2023-02-02;merchant_reference is mandatory\n" +
-			"4;a948cc2344d1;;102.29;2023-03-03;merchant_reference is mandatory\n";
+			"2;e653f3e14bc1;;100.20;2023-02-02;merchant_reference is mandatory\n" +
+			"3;a948cc2344d1;;102.29;2023-03-03;merchant_reference is mandatory\n";
 
 		expect(fs.writeFileSync).toHaveBeenCalledWith("./importReport/report.csv", expected);
 		spy.mockRestore();

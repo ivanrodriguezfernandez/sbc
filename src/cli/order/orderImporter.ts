@@ -118,10 +118,7 @@ async function processRow(
 	const errors = [];
 	const orderRecord = record;
 	const HEADERS_ROW = 1;
-	const HEADER_EMPTY_ROW = 1;
-	const row = info.records + HEADERS_ROW + HEADER_EMPTY_ROW;
-	console.log(info.records, HEADERS_ROW, HEADER_EMPTY_ROW);
-	processedRows = info.records + HEADERS_ROW;
+	const row = info.records + HEADERS_ROW;
 
 	if (orderRecord.merchant_reference === "") {
 		errors.push(ERROR_MESSAGES.MerchantReferenceMandatory);
@@ -149,8 +146,8 @@ async function processRow(
 		await flushBatch(prisma);
 	}
 
-	if (processedRows % 10000 === 0) {
-		logger.info(processedRows, "processedRows");
+	if (row % 10000 === 0) {
+		logger.info(row, "processedRows");
 	}
 }
 
@@ -165,7 +162,6 @@ async function writeOutputCSV(result: Result) {
 	if (!fs.existsSync("./importReport")) {
 		fs.mkdirSync("./importReport");
 	}
-	console.log(" writeOutputCSV", output);
 	fs.writeFileSync("./importReport/report.csv", output);
 }
 
