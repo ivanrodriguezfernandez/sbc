@@ -1,12 +1,14 @@
 import fs from "node:fs";
 import * as readline from "node:readline/promises";
 
+import { PrismaClient } from "@prisma/client/extension";
 import { parse } from "csv-parse";
 
 import { getDB } from "../../__shared__/infrastructure/db";
 import { logger } from "../../__shared__/infrastructure/logger";
 
 const BATCH_SIZE = 1000;
+const HEADERS = "id;merchant_reference;amount;created_at";
 
 const ERROR_MESSAGES = {
 	InvalidColumnNames: "Invalid column names",
@@ -28,10 +30,11 @@ type OrderToInsert = {
 	amount: number;
 	transactionDate: Date;
 };
+let buffer: OrderToInsert[] = [];
 
 export async function importOrders(filePath: string): Promise<void> {
-	console.time("Execution Time");
 	logger.info(`Starting import from file: ${filePath}`);
+	console.time("Execution Time");
 
 	const result = await validateColumnHeaders(filePath);
 
@@ -42,59 +45,70 @@ export async function importOrders(filePath: string): Promise<void> {
 
 	const merchansts = await getMerchantsMap();
 
-	let buffer: OrderToInsert[] = [];
-	let rowNumber = 0;
-	const importErrors: string[] = [];
-
-	const prisma = getDB();
-
 	const parser = fs
 		.createReadStream(filePath)
 		.pipe(parse({ delimiter: ";", columns: true, skip_empty_lines: true }));
 
+	let rowNumber = 0;
+	const errors: RowError[] = [];
+	const prisma = getDB();
+
 	for await (const record of parser) {
 		rowNumber++;
-
-		if (record.merchant_reference === "") {
-			const error =
-				Number(rowNumber + 1) +
-				";" +
-				record.id +
-				";" +
-				record.merchant_reference +
-				";" +
-				record.amount +
-				";" +
-				record.created_at +
-				";" +
-				ERROR_MESSAGES.MerchantReferenceMandatory;
-
-			importErrors.push(error);
-		} else {
-			const merchantId = merchansts.get(record.merchant_reference);
-			buffer.push({
-				externalId: record.id,
-				merchantId,
-				amount: Number(record.amount),
-				transactionDate: new Date(record.created_at),
-			});
-
-			if (buffer.length >= BATCH_SIZE) {
-				await prisma.order.createMany({ data: buffer, skipDuplicates: true });
-				buffer = [];
-			}
+		const rowError = await processRow(record, merchansts, rowNumber, prisma);
+		if (rowError) {
+			errors.push(rowError);
 		}
-
-		if (rowNumber % 10000 === 0) logger.info(`${rowNumber} rows processed`);
 	}
 
 	if (buffer.length > 0) {
 		await prisma.order.createMany({ data: buffer, skipDuplicates: true });
 	}
 
-	importErrors.unshift("row;id;merchant_reference;amount;created_at;errors");
-	console.log("final resultado", importErrors);
-	await writeOutputCSV(importErrors.join("\n") + "\n");
+	if (errors.length > 0) {
+		let output = `row;${HEADERS};errors\n`;
+		for (const e of errors) {
+			output += `${e.row};${e.id};${e.merchant_reference};${e.amount};${e.created_at};${e.errors.join(",")}\n`;
+		}
+		await writeOutputCSV(output);
+	}
+
+	console.timeEnd("Execution Time");
+}
+
+async function processRow(
+	record: OrderRecord,
+	merchants: Map<string, string>,
+	rowNumber: number,
+	prisma: PrismaClient,
+) {
+	const errors = [];
+	const orderRecord = record;
+	const HEADERS_ROW = 1;
+	const row = rowNumber + HEADERS_ROW;
+
+	if (record.merchant_reference === "") {
+		errors.push(ERROR_MESSAGES.MerchantReferenceMandatory);
+	}
+
+	if (errors.length > 0) {
+		const result = { row, ...orderRecord, errors };
+		return result;
+	}
+	const merchantId = merchants.get(record.merchant_reference);
+	buffer.push({
+		externalId: record.id,
+		merchantId,
+		amount: Number(record.amount),
+		transactionDate: new Date(record.created_at),
+	});
+
+	if (buffer.length >= BATCH_SIZE) {
+		await prisma.order.createMany({ data: buffer, skipDuplicates: true });
+		buffer = [];
+	}
+
+	if (rowNumber % 10000 === 0) logger.info(`${rowNumber} rows processed`);
 }
 
 async function validateColumnHeaders(
@@ -134,7 +148,7 @@ async function getFirstLine(filePath: string): Promise<string> {
 	readable.close();
 	return line;
 }
-async function getMerchantsMap() {
+async function getMerchantsMap(): Promise<Map<string, string>> {
 	const prisma = getDB();
 	console.time("Load merchants");
 	const merchants = await prisma.merchant.findMany({ select: { id: true, reference: true } });
