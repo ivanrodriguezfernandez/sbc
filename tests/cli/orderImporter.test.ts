@@ -25,6 +25,13 @@ describe("Import order", () => {
 		await teardownPostgresContainer();
 	});
 
+	afterEach(async () => {
+		await prisma.order.deleteMany();
+		await prisma.merchant.deleteMany();
+	});
+
+	it.todo("WHEN merchant doesn't exit", () => {});
+
 	it("WHEN csv column headers are invalid THEN it return an error message", async () => {
 		const spy = vi.spyOn(fs, "writeFileSync").mockImplementation(() => {});
 		const filePath = getFilePath("invalidColumns_orders.csv");
@@ -38,18 +45,31 @@ describe("Import order", () => {
 		spy.mockRestore();
 	});
 
-	it("WHEN csv is imported THEN database is populated", async () => {
-		//todo: builder
-		await prisma.merchant.upsert({
-			where: { id: "86312006-4d7e-45c4-9c28-788f4aa68a62" },
-			update: {
+	it("WHEN csv is imported twice THEN existing merchants are updated, not duplicated", async () => {
+		await prisma.merchant.create({
+			data: {
+				id: "86312006-4d7e-45c4-9c28-788f4aa68a62",
 				reference: "padberg_group",
 				email: "info@padberg-group.com",
 				liveOn: new Date("2023-02-01T00:00:00.000Z"),
 				disbursementFrequency: DisbursementFrequencyType.DAILY,
 				minimumMonthlyFee: 0.0,
 			},
-			create: {
+		});
+
+		const filePath = getFilePath("basic_orders.csv");
+
+		await importOrders(filePath);
+		await importOrders(filePath);
+
+		const orders = await prisma.order.findMany();
+
+		expect(orders).toHaveLength(1);
+	});
+
+	it("WHEN csv is imported THEN database is populated", async () => {
+		await prisma.merchant.create({
+			data: {
 				id: "86312006-4d7e-45c4-9c28-788f4aa68a62",
 				reference: "padberg_group",
 				email: "info@padberg-group.com",

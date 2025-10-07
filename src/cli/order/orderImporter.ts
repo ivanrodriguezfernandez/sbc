@@ -36,7 +36,7 @@ const orderBuffer: Array<{
 async function flushBatch(prisma: PrismaClient) {
 	if (orderBuffer.length === 0) return;
 
-	await prisma.order.createMany({ data: orderBuffer });
+	await prisma.order.createMany({ data: orderBuffer, skipDuplicates: true });
 	orderBuffer.length = 0;
 }
 
