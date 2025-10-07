@@ -30,6 +30,18 @@ describe("Import order", () => {
 		await prisma.merchant.deleteMany();
 	});
 
+	it("WHEN merchant doesn't exist THEN return an error message", async () => {
+		const spy = vi.spyOn(fs, "writeFileSync").mockImplementation(() => {});
+		const filePath = getFilePath("invalidMerchantReference_orders.csv");
+		await importOrders(filePath);
+		const expected =
+			"row;id;merchant_reference;amount;created_at;errors\n" +
+			"2;e653f3e14bc4;invalid_merchant;102.29;2023-02-01;Merchant referente not found\n";
+
+		expect(fs.writeFileSync).toHaveBeenCalledWith("./importReport/report.csv", expected);
+		spy.mockRestore();
+	});
+
 	it("WHEN there is a row that does not have a merchant_reference THEN we return an error message", async () => {
 		const spy = vi.spyOn(fs, "writeFileSync").mockImplementation(() => {});
 		const filePath = getFilePath("withoutMerchanReference.csv");

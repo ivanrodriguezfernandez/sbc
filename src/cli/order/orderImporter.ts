@@ -11,6 +11,7 @@ const HEADERS = "id;merchant_reference;amount;created_at";
 const ERROR_MESSAGES = {
 	InvalidCSVHeaders: "Invalid CSV headers",
 	MerchantReferenceMandatory: "merchant_reference is mandatory",
+	MerchantReferenceNotFound: "Merchant referente not found",
 };
 
 type OrderRecord = {
@@ -58,9 +59,20 @@ export async function importOrders(filePath: string): Promise<void> {
 			continue;
 		}
 
+		const merchantId = merchants.get(record.merchant_reference);
+		if (merchantId === undefined) {
+			const data: RowError = {
+				row: rowNumber + 1,
+				...record,
+				errors: [ERROR_MESSAGES.MerchantReferenceNotFound],
+			};
+			errors.push(data);
+			continue;
+		}
+
 		buffer.push({
 			externalId: record.id,
-			merchantId: merchants.get(record.merchant_reference),
+			merchantId: merchantId as string,
 			amount: Number(record.amount),
 			transactionDate: new Date(record.created_at),
 		});
