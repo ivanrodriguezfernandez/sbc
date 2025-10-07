@@ -38,13 +38,9 @@ export async function importOrders(filePath: string): Promise<void> {
 
 	let buffer: OrderToInsert[] = [];
 
-	const parser = fs.createReadStream(filePath).pipe(
-		parse({
-			delimiter: ";",
-			skip_empty_lines: true,
-			columns: true,
-		}),
-	);
+	const parser = fs
+		.createReadStream(filePath)
+		.pipe(parse({ delimiter: ";", skip_empty_lines: true, columns: true }));
 
 	let rowNumber = 0;
 	const errors: RowError[] = [];
@@ -53,20 +49,11 @@ export async function importOrders(filePath: string): Promise<void> {
 
 	for await (const record of parser) {
 		rowNumber++;
-		const result = await validateRow(record, rowNumber);
+		const merchantId = merchants.get(record.merchant_reference);
+
+		const result = await validateRow(record, rowNumber, merchantId);
 		if (!result.isSuccess) {
 			errors.push(result.rowError as RowError);
-			continue;
-		}
-
-		const merchantId = merchants.get(record.merchant_reference);
-		if (merchantId === undefined) {
-			const data: RowError = {
-				row: rowNumber + 1,
-				...record,
-				errors: [ERROR_MESSAGES.MerchantReferenceNotFound],
-			};
-			errors.push(data);
 			continue;
 		}
 
@@ -101,7 +88,11 @@ export async function importOrders(filePath: string): Promise<void> {
 
 type ValidateRowResult = { isSuccess: boolean; rowError: RowError | null };
 
-async function validateRow(record: OrderRecord, rowNumber: number): Promise<ValidateRowResult> {
+async function validateRow(
+	record: OrderRecord,
+	rowNumber: number,
+	merchantId: string | undefined,
+): Promise<ValidateRowResult> {
 	const errors = [];
 	const orderRecord = record;
 	const HEADERS_ROW = 1;
@@ -109,12 +100,19 @@ async function validateRow(record: OrderRecord, rowNumber: number): Promise<Vali
 
 	if (record.merchant_reference === "") {
 		errors.push(ERROR_MESSAGES.MerchantReferenceMandatory);
+		const result = { row, ...orderRecord, errors };
+		return { isSuccess: false, rowError: result };
+	}
+
+	if (merchantId === undefined) {
+		errors.push(ERROR_MESSAGES.MerchantReferenceNotFound);
 	}
 
 	if (errors.length > 0) {
 		const result = { row, ...orderRecord, errors };
 		return { isSuccess: false, rowError: result };
 	}
+
 	return { isSuccess: true, rowError: null };
 }
 
@@ -141,12 +139,7 @@ async function validateCSVHeaders(filePath: string): Promise<void> {
 		const expectedHeaders = ["id", "merchant_reference", "amount", "created_at"];
 
 		const stream = fs.createReadStream(filePath);
-		const parser = stream.pipe(
-			parse({
-				delimiter: ";",
-				to_line: 1,
-			}),
-		);
+		const parser = stream.pipe(parse({ delimiter: ";", to_line: 1 }));
 
 		parser.on("data", (row) => {
 			const normalizedHeaders = row.map((h: string) => h.trim());
