@@ -21,6 +21,3 @@ The project has a VSCode configuration that will help you to work with the proje
 
 - `settings.json`: This file includes the configuration for the editor.
 - `extensions.json`: This file includes the extensions that are recommended to work with the project.
-
-Una columna status (por ejemplo: "pending" | "disbursed" | "canceled").
-Una columna executed_on para registrar la fecha en que se incluyó en un disbursement.
