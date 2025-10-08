@@ -4,7 +4,7 @@
 - **Language:** [TypeScript](https://typescriptlang.org) – static typing for safer code
 - **Testing:** [Vitest](https://vitest.dev/) – unit & integration tests
 - **Database:** Prisma + PostgreSQL – type-safe ORM with Testcontainers for testing
-- **Data:** `csv-parse` / `csv-stringify` – CSV import/export
+- **Data:** `csv-parse` – CSV import/export
 - **Logging:** `pino` + `pino-pretty` – structured and readable logs
 - **Utilities:** `shelljs`, `tsx` – shell scripts & direct TS execution
 - **Code Quality:** ESLint + Prettier – linting, formatting, import sorting

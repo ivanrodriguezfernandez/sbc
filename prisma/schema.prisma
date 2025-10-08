@@ -25,11 +25,13 @@ model merchant {
 }
 
 model order {
-  id              String   @id @default(uuid())
-  externalId      String   @db.Char(12)
+  id              String    @id @default(uuid())
+  externalId      String
   merchantId      String
-  amount          Decimal  @db.Decimal(12, 2)
+  amount          Decimal   @db.Decimal(12, 2)
   transactionDate DateTime
+  disbursed       Boolean   @default(false)
+  disbursedAt     DateTime? @db.Timestamptz(6)
 
   //Audit
   createdAt DateTime  @default(now()) @db.Timestamptz(6)

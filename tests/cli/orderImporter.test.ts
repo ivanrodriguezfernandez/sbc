@@ -1,19 +1,15 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import {
-	disbursementFrequencyType as prismaDisbursementFrequencyType,
-	PrismaClient,
-} from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 
 import { importOrders } from "../../src/cli/order/orderImporter";
+import { DISBURSEMENT_FREQUENCY_TYPE } from "../../src/order/domain/disbursementFrequencyType";
 import { setupPostgresContainer, teardownPostgresContainer } from "../config/setup";
 
 const getFilePath = (filename: string) => path.join(__dirname, `./csvMocks/${filename}`);
 
 let prisma: PrismaClient;
-
-const DisbursementFrequencyType = prismaDisbursementFrequencyType;
 
 describe("Import order", () => {
 	beforeAll(async () => {
@@ -71,7 +67,7 @@ describe("Import order", () => {
 				reference: "padberg_group",
 				email: "info@padberg-group.com",
 				liveOn: new Date("2023-02-01T00:00:00.000Z"),
-				disbursementFrequency: DisbursementFrequencyType.DAILY,
+				disbursementFrequency: DISBURSEMENT_FREQUENCY_TYPE.DAILY,
 				minimumMonthlyFee: 0.0,
 			},
 		});
@@ -93,7 +89,7 @@ describe("Import order", () => {
 				reference: "padberg_group",
 				email: "info@padberg-group.com",
 				liveOn: new Date("2023-02-01T00:00:00.000Z"),
-				disbursementFrequency: DisbursementFrequencyType.DAILY,
+				disbursementFrequency: DISBURSEMENT_FREQUENCY_TYPE.DAILY,
 				minimumMonthlyFee: 0.0,
 			},
 		});

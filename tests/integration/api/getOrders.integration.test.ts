@@ -1,15 +1,11 @@
-import {
-	disbursementFrequencyType as prismaDisbursementFrequencyType,
-	PrismaClient,
-} from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 import request from "supertest";
 
+import { DISBURSEMENT_FREQUENCY_TYPE } from "../../../src/order/domain/disbursementFrequencyType";
 import { app } from "../../config/appInstance";
 import { setupPostgresContainer, teardownPostgresContainer } from "../../config/setup";
 
 let prisma: PrismaClient;
-
-const DisbursementFrequencyType = prismaDisbursementFrequencyType;
 
 describe("Given a GET request to /orders", () => {
 	beforeAll(async () => {
@@ -29,7 +25,7 @@ describe("Given a GET request to /orders", () => {
 				reference: "padberg_group",
 				email: "info@padberg-group.com",
 				liveOn: new Date("2023-02-01T00:00:00.000Z"),
-				disbursementFrequency: DisbursementFrequencyType.DAILY,
+				disbursementFrequency: DISBURSEMENT_FREQUENCY_TYPE.DAILY,
 				minimumMonthlyFee: 0.0,
 			},
 		});
