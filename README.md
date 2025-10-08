@@ -51,4 +51,4 @@ The Api exposes the following endpoints:
 
 - `http://localhost:3000/api/merchants`
 - `http://localhost:3000/api/orders`
-- `http://localhost:3000/api/disbursement`
+- `http://localhost:3000/api/disbursement` (Not Implemented)
