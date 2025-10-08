@@ -53,6 +53,7 @@ describe("Process history", () => {
 			amount: 40,
 		});
 		const result = await processDaily();
+
 		expect(result).toBe("hola");
 	});
 });
