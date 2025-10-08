@@ -4,10 +4,6 @@ import { DISBURSEMENT_FREQUENCY_TYPE } from "../../../src/order/domain/disbursem
 import { getDB } from "../../__shared__/infrastructure/db";
 import { getUniqueOrderTransactionDates } from "../../order/aplication/getUniqueOrderTransactionDates";
 
-//todo:fix alias path
-
-//const utcDate = new Date(Date.UTC(2025, 0, 1, 8, 0, 0));
-
 export async function processDaily(): Promise<void> {
 	const prisma = getDB();
 	const dates = await getUniqueOrderTransactionDates();

@@ -29,16 +29,17 @@ describe("Process history", () => {
 			disbursementFrequency: DISBURSEMENT_FREQUENCY_TYPE.DAILY,
 		});
 
-		await dbContext.order.create({
+		const order1 = await dbContext.order.create({
 			merchantId: merchant.id,
 			transactionDate: new Date("2023-03-01T00:00:00.000Z"),
 			amount: new Decimal(10),
 		});
-		await dbContext.order.create({
+		const order2 = await dbContext.order.create({
 			merchantId: merchant.id,
 			transactionDate: new Date("2023-03-15T00:00:00.000Z"),
 			amount: new Decimal(20),
 		});
+
 		await dbContext.order.create({
 			merchantId: merchant.id,
 			transactionDate: new Date("2023-03-31T12:00:00.000Z"),
@@ -74,5 +75,15 @@ describe("Process history", () => {
 			},
 		];
 		expect(disbursementsConverted).toStrictEqual(expected);
+
+		const orderIds = [order1.id, order2.id];
+
+		const count = await prisma.order.count({
+			where: {
+				id: { in: orderIds },
+				disbursementId: { not: null },
+			},
+		});
+		expect(count).toStrictEqual(2);
 	});
 });
