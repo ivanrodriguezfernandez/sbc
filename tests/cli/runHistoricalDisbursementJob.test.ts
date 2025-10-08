@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import Decimal from "decimal.js";
 
 import { createDbContext } from "../../src/__shared__/infrastructure/prisma.extensions";
 import { processDaily } from "../../src/cli/disbursed/runHistoricalDisbursementJob";
@@ -17,43 +18,61 @@ describe("Process history", () => {
 	});
 
 	afterEach(async () => {
+		await prisma.disbursement.deleteMany();
 		await prisma.order.deleteMany();
 		await prisma.merchant.deleteMany();
 	});
 	it("should process orders of merchant type daily", async () => {
-		//processDaily
 		const dbContext = createDbContext(prisma);
 		const merchant = await dbContext.merchant.create({
-			reference: "padberg_group",
+			reference: "padberg_group_IVAN",
 			disbursementFrequency: DISBURSEMENT_FREQUENCY_TYPE.DAILY,
-		});
-		const merchantW = await dbContext.merchant.create({
-			reference: "padberg_group2",
-			disbursementFrequency: DISBURSEMENT_FREQUENCY_TYPE.WEEKLY,
 		});
 
 		await dbContext.order.create({
 			merchantId: merchant.id,
 			transactionDate: new Date("2023-03-01T00:00:00.000Z"),
-			amount: 10,
+			amount: new Decimal(10),
 		});
 		await dbContext.order.create({
 			merchantId: merchant.id,
 			transactionDate: new Date("2023-03-15T00:00:00.000Z"),
-			amount: 20,
+			amount: new Decimal(20),
 		});
 		await dbContext.order.create({
 			merchantId: merchant.id,
-			transactionDate: new Date("2023-03-15T00:00:00.000Z"),
-			amount: 30,
+			transactionDate: new Date("2023-03-31T12:00:00.000Z"),
+			amount: new Decimal(30),
 		});
-		await dbContext.order.create({
-			merchantId: merchant.id,
-			transactionDate: new Date("2023-03-31T00:00:00.000Z"),
-			amount: 40,
-		});
-		const result = await processDaily();
 
-		expect(result).toBe("hola");
+		await processDaily();
+
+		const disbursements = await prisma.disbursement.findMany({ orderBy: { disbursedAt: "asc" } });
+
+		const disbursementsConverted = disbursements.map((d) => ({
+			...d,
+			totalGross: new Decimal(d.totalGross.toString()),
+			totalCommission: new Decimal(d.totalCommission.toString()),
+			payout: new Decimal(d.payout.toString()),
+		}));
+		const expected = [
+			{
+				id: expect.any(String),
+				merchantId: merchant.id,
+				disbursedAt: new Date("2023-03-01T06:00:00.000Z"),
+				totalGross: new Decimal(10),
+				totalCommission: new Decimal(0.1),
+				payout: new Decimal(9.9),
+			},
+			{
+				id: expect.any(String),
+				merchantId: merchant.id,
+				disbursedAt: new Date("2023-03-15T06:00:00.000Z"),
+				totalGross: new Decimal(20),
+				totalCommission: new Decimal(0.2),
+				payout: new Decimal(19.8),
+			},
+		];
+		expect(disbursementsConverted).toStrictEqual(expected);
 	});
 });

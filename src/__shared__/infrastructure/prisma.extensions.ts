@@ -18,13 +18,14 @@ export function createDbContext(prisma: PrismaClient) {
 	});
 
 	async function createMerchant({
+		id = randomUUID(),
 		reference = randomUUID(),
 		liveOn = new Date(),
 		disbursementFrequency = DISBURSEMENT_FREQUENCY_TYPE.DAILY,
 	}: Partial<PrismaMerchant>) {
 		return prisma.merchant.create({
 			data: {
-				id: randomUUID(),
+				id,
 				reference,
 				email: `${reference}@${reference}.com`,
 				liveOn,

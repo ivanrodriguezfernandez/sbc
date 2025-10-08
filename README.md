@@ -11,13 +11,15 @@
 - **Test Containers:** `@testcontainers/postgresql` – ephemeral PostgreSQL instances for testing.
 - **Data Handling:** `csv-parse` – CSV parsing, import/export functionality.
 - **Date Utilities:** [date-fns](https://date-fns.org/) – date manipulation and formatting.
+- **Decimal Utilities:** [decimal.js](https://www.npmjs.com/package/decimal.js) An arbitrary-precision Decimal type for JavaScript.
+  – precise decimal arithmetic for financial and scientific calculations.
 - **Logging:** [`pino`](https://getpino.io/) + [`pino-pretty`](https://github.com/pinojs/pino-pretty) – structured and readable logs.
 - **Shell / Scripting:** `shelljs`, `tsx` – shell scripts and direct TypeScript execution without prior compilation.
 - **Code Quality / Linting:** ESLint + Prettier + plugins (`import`, `simple-import-sort`, `prettier`) – linting, formatting, and import sorting.
 
 ## Initial Setup
 
-Before you clone the project, you must configure your local environment by installing [Docker](https://docs.docker.com/engine/install/) and [NPM](https://www.npmjs.com/) dependencies in your machine.
+Before you clone (copy) the project, you must configure your local environment by installing [Docker](https://docs.docker.com/engine/install/) and [NPM](https://www.npmjs.com/) dependencies in your machine.
 
 The way of interacting with the project is the Makefile. To see all the available commands and the descriptions, you can run `make help` or `make` to see the list of commands.
 
