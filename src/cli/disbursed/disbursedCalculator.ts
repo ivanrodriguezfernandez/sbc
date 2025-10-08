@@ -1,9 +1,7 @@
-//Usuario compra. El usuario le debe a SEQURA y SEGURA va pagando al merchant en funcion de lo que tiene configurado.
 import { addDays, addWeeks, getDay, isBefore, startOfWeek } from "date-fns";
 
 import { getDB } from "@/src/__shared__/infrastructure/db";
 
-//Desemboloso a los comerciantes.
 export async function calculate(): Promise<void> {
 	const prisma = getDB();
 	const result = await prisma.order.aggregate({

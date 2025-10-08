@@ -1,11 +1,8 @@
 import { PrismaClient } from "@prisma/client";
 
-import { createDbContext } from "../../../src/__shared__/infrastructure/prisma.extensions";
-import {
-	getDistinctTransactionDates,
-	getDistinctWeeks,
-} from "../../../src/cli/disbursed/runHistoricalDisbursementJob";
-import { setupPostgresContainer, teardownPostgresContainer } from "../../config/setup";
+import { createDbContext } from "../../../../src/__shared__/infrastructure/prisma.extensions";
+import { getWeeksForAllOrders } from "../../../../src/order/aplication/getWeeksForAllOrders";
+import { setupPostgresContainer, teardownPostgresContainer } from "../../../config/setup";
 
 let prisma: PrismaClient;
 
@@ -22,39 +19,6 @@ describe("Historical Disbursement Job - Distinct Transaction Dates", () => {
 	afterEach(async () => {
 		await prisma.order.deleteMany();
 		await prisma.merchant.deleteMany();
-	});
-	it("should return only distinct transaction dates from orders", async () => {
-		const dbContext = createDbContext(prisma);
-		const merchant = await dbContext.merchant.create({ reference: "padberg_group" });
-
-		await dbContext.order.create({
-			merchantId: merchant.id,
-			transactionDate: new Date("2021-02-01T00:00:00.000Z"),
-		});
-		await dbContext.order.create({
-			merchantId: merchant.id,
-			transactionDate: new Date("2023-02-01T00:00:00.000Z"),
-		});
-		await dbContext.order.create({
-			merchantId: merchant.id,
-			transactionDate: new Date("2023-02-01T00:00:00.000Z"),
-		});
-		await dbContext.order.create({
-			merchantId: merchant.id,
-			transactionDate: new Date("2024-02-01T00:00:00.000Z"),
-		});
-
-		const data = await getDistinctTransactionDates();
-
-		const dataStrings = data.map((d) => d.toISOString());
-
-		const expected = [
-			"2021-02-01T00:00:00.000Z",
-			"2023-02-01T00:00:00.000Z",
-			"2024-02-01T00:00:00.000Z",
-		];
-
-		expect(dataStrings).toStrictEqual(expected);
 	});
 
 	it("should return only distinct week dates from orders", async () => {
@@ -74,7 +38,7 @@ describe("Historical Disbursement Job - Distinct Transaction Dates", () => {
 			transactionDate: new Date("2023-03-31T00:00:00.000Z"),
 		});
 
-		const data = await getDistinctWeeks();
+		const data = await getWeeksForAllOrders();
 
 		const dataStrings = data.map((w) => ({
 			start: w.start.toISOString(),
