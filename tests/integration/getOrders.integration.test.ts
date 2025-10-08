@@ -1,9 +1,9 @@
 import { PrismaClient } from "@prisma/client";
 import request from "supertest";
 
-import { DISBURSEMENT_FREQUENCY_TYPE } from "../../../src/order/domain/disbursementFrequencyType";
-import { app } from "../../config/appInstance";
-import { setupPostgresContainer, teardownPostgresContainer } from "../../config/setup";
+import { DISBURSEMENT_FREQUENCY_TYPE } from "../../src/order/domain/disbursementFrequencyType";
+import { app } from "../config/appInstance";
+import { setupPostgresContainer, teardownPostgresContainer } from "../config/setup";
 
 let prisma: PrismaClient;
 
