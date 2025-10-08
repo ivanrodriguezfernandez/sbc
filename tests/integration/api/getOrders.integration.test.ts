@@ -50,6 +50,7 @@ describe("Given a GET request to /orders", () => {
 				id: expect.any(String),
 				externalId: "e653f3e14bc4",
 				merchantId: "86312006-4d7e-45c4-9c28-788f4aa68a62",
+				disbursementId: null,
 				transactionDate: "2023-02-01T00:00:00.000Z",
 				amount: 102.29,
 				createdAt: expect.any(String),
