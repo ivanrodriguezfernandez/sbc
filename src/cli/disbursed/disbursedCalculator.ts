@@ -93,6 +93,7 @@ export async function calculate(): Promise<void> {
 
             SQL: SELECT DISTINCT "transactionDate"	FROM public."order" order by 1; me salen 430 dias que hay pagos. eso quiere decir que no haría falta recorrer todos los días sino.
             podriamos iterar por esos 430 dias.
+            Hemos creado metodo para recuperar todas las fechas
         }
         if mechant  == WEEKLY {
           El dia ACTUAL coincide con el live_on => entonces hay hacer desembolso y calculamos comisiones persistamos data etc..
@@ -122,3 +123,36 @@ export async function calculate(): Promise<void> {
 		console.log(merchant.reference, merchant.liveOn, weekdayOfMerchant, getDay(merchant.liveOn));
 	}
 }
+
+// for each merchant {
+//   const frequency = merchant.disbursementFrequency;
+
+//   if (frequency === 'DAILY' || (frequency === 'WEEKLY' && todayIsMerchantPayday(merchant))) {
+
+//     const ordersToPay = getOrdersToPay(merchant, frequency);
+
+//     const ordersWithCommission = ordersToPay.map(o => ({
+//       ...o,
+//       commission: calculateCommission(o.amount),
+//       netAmount: o.amount - calculateCommission(o.amount),
+//     }));
+
+//     const totalGross = sum(o.amount for o in ordersWithCommission);
+//     const totalCommission = sum(o.commission for o in ordersWithCommission);
+//     const totalNet = totalGross - totalCommission;
+
+//     const disbursement = {
+//       reference: generateUniqueReference(),
+//       merchantId: merchant.id,
+//       date: today,
+//       totalGross,
+//       totalCommission,
+//       payout: totalNet,
+//       orders: ordersWithCommission.map(o => o.id),
+//     };
+
+//     // 6️⃣ Guardar disbursement y marcar orders como pagadas
+//     saveDisbursement(disbursement);
+//     markOrdersAsDisbursed(ordersToPay);
+//   }
+// }
