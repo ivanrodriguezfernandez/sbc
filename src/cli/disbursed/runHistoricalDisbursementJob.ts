@@ -6,7 +6,6 @@ import { Merchant } from "@/src/merchant/domain/merchant";
 import { DISBURSEMENT_FREQUENCY_TYPE } from "../../../src/order/domain/disbursementFrequencyType";
 import { getDB } from "../../__shared__/infrastructure/db";
 import { logger } from "../../__shared__/infrastructure/logger";
-import { getUniqueOrderTransactionDates } from "../../order/aplication/getUniqueOrderTransactionDates";
 
 export async function historicalDisbursementJob(): Promise<void> {
 	logger.info(`Starting processDaily`);
@@ -78,4 +77,20 @@ function todayIsMerchantPayday(merchant: Merchant) {
 	const merchantWeekday = getDay(merchant.liveOn); // 0-6 (sunday-saturday)
 	const todayWeekday = getDay(new Date());
 	return merchantWeekday === todayWeekday;
+}
+
+export async function getUniqueOrderTransactionDates(): Promise<Array<Date>> {
+	const prisma = getDB();
+
+	const dates = await prisma.order.findMany({
+		distinct: ["transactionDate"],
+		select: {
+			transactionDate: true,
+		},
+		orderBy: {
+			transactionDate: "asc",
+		},
+	});
+
+	return dates.map((d) => d.transactionDate);
 }
