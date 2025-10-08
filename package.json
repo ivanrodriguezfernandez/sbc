@@ -5,8 +5,7 @@
 	"main": "index.js",
 	"type": "module",
 	"scripts": {
-		"history": "tsx src/cli/disbursed/run.ts",
-		"disbursed": "tsx src/cli/disbursed/index.ts",
+		"history": "tsx src/cli/disbursed/index.ts",
 		"importMerchants": "tsx src/cli/merchant/index.ts",
 		"importOrders": "tsx src/cli/order/index.ts",
 		"dev": "tsx src/server.ts",
