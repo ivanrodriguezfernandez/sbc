@@ -2,10 +2,14 @@ import Decimal from "decimal.js";
 
 import { DISBURSEMENT_FREQUENCY_TYPE } from "../../../src/order/domain/disbursementFrequencyType";
 import { getDB } from "../../__shared__/infrastructure/db";
+import { logger } from "../../__shared__/infrastructure/logger";
 import { getUniqueOrderTransactionDates } from "../../order/aplication/getUniqueOrderTransactionDates";
 
 export async function processDaily(): Promise<void> {
+	logger.info(`Starting processDaily`);
+	console.time("Execution Time");
 	const prisma = getDB();
+	let rowNumber = 0;
 	const dates = await getUniqueOrderTransactionDates();
 	const merchants = await prisma.merchant.findMany({
 		where: { disbursementFrequency: DISBURSEMENT_FREQUENCY_TYPE.DAILY },
@@ -43,14 +47,19 @@ export async function processDaily(): Promise<void> {
 					payout: payout,
 				},
 			});
+			rowNumber++;
 
 			const orderIds = orders.map((o) => o.id);
 			await prisma.order.updateMany({
 				where: { id: { in: orderIds } },
 				data: { disbursementId: disbursement.id },
 			});
+
+			if (rowNumber % 1000 === 0) logger.info(`${rowNumber} disbursement processed`);
 		}
 	}
+	logger.info(`Finish processDaily: Total disbursement processed: ${rowNumber}`);
+	console.timeEnd("Execution Time");
 }
 
 function calculateCommission(amount: Decimal): Decimal {

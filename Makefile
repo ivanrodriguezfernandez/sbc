@@ -5,7 +5,7 @@ help:
 	@grep -E '^[a-zA-Z_\/-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
 .PHONY: setup
-setup: ## Install dependencies, launch the database, apply migrations and launch the API.
+setup: ## Install dependencies, launch the database and apply migrations
 	@echo Installing all dependencies
 	npm install
 	docker-compose up -d  --wait

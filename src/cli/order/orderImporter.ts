@@ -5,7 +5,7 @@ import { parse } from "csv-parse";
 import { getDB } from "../../__shared__/infrastructure/db";
 import { logger } from "../../__shared__/infrastructure/logger";
 
-const BATCH_SIZE = 1000;
+const BATCH_SIZE = 5_000;
 const HEADERS = "id;merchant_reference;amount;created_at";
 
 const ERROR_MESSAGES = {
