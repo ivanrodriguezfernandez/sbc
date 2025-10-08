@@ -17,28 +17,29 @@ model merchant {
   orders                order[]
 
   //Audit
-  createdAt DateTime  @default(now()) @db.Timestamptz(6)
-  updatedAt DateTime  @updatedAt @db.Timestamptz(6)
-  deletedAt DateTime? @db.Timestamptz(6)
+  createdAt    DateTime       @default(now()) @db.Timestamptz(6)
+  updatedAt    DateTime       @updatedAt @db.Timestamptz(6)
+  deletedAt    DateTime?      @db.Timestamptz(6)
+  disbursement disbursement[]
 
   @@unique([id, reference, email])
 }
 
 model order {
-  id              String    @id @default(uuid())
+  id              String   @id @default(uuid())
   externalId      String
   merchantId      String
-  amount          Decimal   @db.Decimal(12, 2)
+  disbursementId  String?
+  amount          Decimal  @db.Decimal(12, 2)
   transactionDate DateTime
-  disbursed       Boolean   @default(false)
-  disbursedAt     DateTime? @db.Timestamptz(6)
 
   //Audit
   createdAt DateTime  @default(now()) @db.Timestamptz(6)
   updatedAt DateTime  @updatedAt @db.Timestamptz(6)
   deletedAt DateTime? @db.Timestamptz(6)
 
-  merchant merchant @relation(fields: [merchantId], references: [id])
+  merchant     merchant      @relation(fields: [merchantId], references: [id])
+  disbursement disbursement? @relation(fields: [disbursementId], references: [id])
 
   @@unique([externalId, merchantId])
   @@index([merchantId])
@@ -47,4 +48,16 @@ model order {
 enum disbursementFrequencyType {
   WEEKLY
   DAILY
+}
+
+model disbursement {
+  id              String    @id @default(uuid())
+  merchantId      String
+  disbursedAt     DateTime? @db.Timestamptz(6)
+  totalGross      Decimal   @db.Decimal(12, 2)
+  totalCommission Decimal   @db.Decimal(12, 2)
+  payout          Decimal   @db.Decimal(12, 2)
+
+  merchant merchant @relation(fields: [merchantId], references: [id])
+  orders   order[]
 }
