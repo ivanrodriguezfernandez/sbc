@@ -1,13 +1,9 @@
-import {
-	disbursementFrequencyType as prismaDisbursementFrequencyType,
-	PrismaClient,
-} from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 
 import { createDbContext } from "../../src/__shared__/infrastructure/prisma.extensions";
 import { processDaily } from "../../src/cli/disbursed/runHistoricalDisbursementJob";
+import { DISBURSEMENT_FREQUENCY_TYPE } from "../../src/order/domain/disbursementFrequencyType";
 import { setupPostgresContainer, teardownPostgresContainer } from "../config/setup";
-
-const DisbursementFrequencyType = prismaDisbursementFrequencyType;
 
 let prisma: PrismaClient;
 describe("Process history", () => {
@@ -29,11 +25,11 @@ describe("Process history", () => {
 		const dbContext = createDbContext(prisma);
 		const merchant = await dbContext.merchant.create({
 			reference: "padberg_group",
-			disbursementFrequency: DisbursementFrequencyType.DAILY,
+			disbursementFrequency: DISBURSEMENT_FREQUENCY_TYPE.DAILY,
 		});
 		const merchantW = await dbContext.merchant.create({
 			reference: "padberg_group2",
-			disbursementFrequency: DisbursementFrequencyType.WEEKLY,
+			disbursementFrequency: DISBURSEMENT_FREQUENCY_TYPE.WEEKLY,
 		});
 
 		await dbContext.order.create({

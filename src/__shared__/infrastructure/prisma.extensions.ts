@@ -4,13 +4,12 @@ import {
 	Prisma,
 	PrismaClient,
 } from "@prisma/client";
-import { disbursementFrequencyType as prismaDisbursementFrequencyType } from "@prisma/client";
 import { randomUUID } from "crypto";
+
+import { DISBURSEMENT_FREQUENCY_TYPE } from "../../order/domain/disbursementFrequencyType";
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export function createDbContext(prisma: PrismaClient) {
-	const DisbursementFrequencyType = prismaDisbursementFrequencyType;
-
 	const dbContext = prisma.$extends({
 		model: {
 			merchant: { create: createMerchant },
@@ -21,7 +20,7 @@ export function createDbContext(prisma: PrismaClient) {
 	async function createMerchant({
 		reference = randomUUID(),
 		liveOn = new Date(),
-		disbursementFrequency = DisbursementFrequencyType.DAILY,
+		disbursementFrequency = DISBURSEMENT_FREQUENCY_TYPE.DAILY,
 	}: Partial<PrismaMerchant>) {
 		return prisma.merchant.create({
 			data: {
