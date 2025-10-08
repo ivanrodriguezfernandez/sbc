@@ -2,7 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import Decimal from "decimal.js";
 
 import { createDbContext } from "../../src/__shared__/infrastructure/prisma.extensions";
-import { processDaily } from "../../src/cli/disbursed/runHistoricalDisbursementJob";
+import { historicalDisbursementJob } from "../../src/cli/disbursed/runHistoricalDisbursementJob";
 import { DISBURSEMENT_FREQUENCY_TYPE } from "../../src/order/domain/disbursementFrequencyType";
 import { setupPostgresContainer, teardownPostgresContainer } from "../config/setup";
 
@@ -47,7 +47,7 @@ describe("Process history", () => {
 			amount: new Decimal(30),
 		});
 
-		await processDaily();
+		await historicalDisbursementJob();
 
 		const disbursements = await prisma.disbursement.findMany({ orderBy: { disbursedAt: "asc" } });
 
@@ -112,16 +112,17 @@ describe("Process history", () => {
 			amount: new Decimal(30),
 		});
 
-		await processDaily();
+		await historicalDisbursementJob();
 
 		const disbursements = await prisma.disbursement.findMany({ orderBy: { disbursedAt: "asc" } });
 
-		const disbursementsConverted = disbursements.map((d) => ({
-			...d,
-			totalGross: new Decimal(d.totalGross.toString()),
-			totalCommission: new Decimal(d.totalCommission.toString()),
-			payout: new Decimal(d.payout.toString()),
+		const disbursementsConverted = disbursements.map((disbursement) => ({
+			...disbursement,
+			totalGross: new Decimal(disbursement.totalGross.toString()),
+			totalCommission: new Decimal(disbursement.totalCommission.toString()),
+			payout: new Decimal(disbursement.payout.toString()),
 		}));
+
 		const expected = [
 			{
 				id: expect.any(String),
@@ -142,11 +143,9 @@ describe("Process history", () => {
 		];
 		expect(disbursementsConverted).toStrictEqual(expected);
 
-		const orderIds = [order1.id, order2.id];
-
 		const count = await prisma.order.count({
 			where: {
-				id: { in: orderIds },
+				id: { in: [order1.id, order2.id] },
 				disbursementId: { not: null },
 			},
 		});

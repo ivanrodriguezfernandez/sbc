@@ -1,7 +1,7 @@
-import { processDaily } from "./runHistoricalDisbursementJob";
+import { historicalDisbursementJob } from "./runHistoricalDisbursementJob";
 
 async function main() {
-	await processDaily();
+	await historicalDisbursementJob();
 }
 
 void main();

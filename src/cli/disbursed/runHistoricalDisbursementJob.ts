@@ -8,7 +8,7 @@ import { getDB } from "../../__shared__/infrastructure/db";
 import { logger } from "../../__shared__/infrastructure/logger";
 import { getUniqueOrderTransactionDates } from "../../order/aplication/getUniqueOrderTransactionDates";
 
-export async function processDaily(): Promise<void> {
+export async function historicalDisbursementJob(): Promise<void> {
 	logger.info(`Starting processDaily`);
 	console.time("Execution Time");
 	const prisma = getDB();
