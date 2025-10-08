@@ -8,7 +8,7 @@ import { getDB } from "../../__shared__/infrastructure/db";
 import { logger } from "../../__shared__/infrastructure/logger";
 
 export async function historicalDisbursementJob(): Promise<void> {
-	logger.info(`Starting processDaily`);
+	logger.info(`Starting processDaily/weekly`);
 	console.time("Execution Time");
 	const prisma = getDB();
 	let rowNumber = 0;
