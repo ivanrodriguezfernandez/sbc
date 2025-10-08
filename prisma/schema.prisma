@@ -30,8 +30,8 @@ model order {
   merchantId      String
   amount          Decimal   @db.Decimal(12, 2)
   transactionDate DateTime
-  processed       Boolean   @default(false)
-  processedAt     DateTime? @db.Timestamptz(6)
+  disbursed       Boolean   @default(false)
+  disbursedAt     DateTime? @db.Timestamptz(6)
 
   //Audit
   createdAt DateTime  @default(now()) @db.Timestamptz(6)
