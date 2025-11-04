@@ -20,6 +20,7 @@ export async function historicalDisbursementJob(): Promise<void> {
 		for (let merchant of merchants) {
 			if (
 				merchant.disbursementFrequency === DISBURSEMENT_FREQUENCY_TYPE.DAILY ||
+				// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 				(merchant.disbursementFrequency === DISBURSEMENT_FREQUENCY_TYPE.WEEKLY &&
 					todayIsMerchantPayday(merchant))
 			) {
